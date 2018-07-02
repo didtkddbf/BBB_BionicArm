@@ -88,7 +88,6 @@ class MyWindow(QMainWindow, form_class):
         message = bus.recv(1.0)
         Temp = message.data[2] + message.data[3] * 256
         BT = Temp // 50 - 273
-        print(i * 0.1, BT)
         self.BicepTemp.display(BT)
         time.sleep(0.1)
 
@@ -98,7 +97,6 @@ class MyWindow(QMainWindow, form_class):
         message = bus.recv(1.0)
         Temp = message.data[2] + message.data[3] * 256
         TT = Temp // 50 - 273
-        print(i * 0.1, TT)
         self.TricepTemp.display(TT)
         time.sleep(0.1)
 
