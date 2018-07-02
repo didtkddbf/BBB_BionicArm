@@ -15,8 +15,8 @@ FAN_PIN = 'P8_8'
 GPIO.setup(FAN_PIN, GPIO.OUT)
 FAN2_PIN = 'P8_10'
 GPIO.setup(FAN2_PIN, GPIO.OUT)
-GPIO.output(FAN_PIN, GPIO.HIGH)
-GPIO.output(FAN2_PIN, GPIO.HIGH)
+GPIO.output(FAN_PIN, GPIO.LOW)
+GPIO.output(FAN2_PIN, GPIO.LOW)
 
 class Worker(QRunnable):
     '''
@@ -105,7 +105,7 @@ class MyWindow(QMainWindow, form_class):
         global BT
         BHT = self.BHtime.value()
         for i in range(1, BHT):
-            GPIO.output(FAN_PIN, GPIO.HIGH)
+            GPIO.output(FAN_PIN, GPIO.LOW)
             PWM2 = PWM * 1023 // 100
             PWMH = PWM2 // 256
             PWML = PWM2 - PWMH * 256
@@ -119,14 +119,14 @@ class MyWindow(QMainWindow, form_class):
             time.sleep(0.1)
         msg = can.Message(arbitration_id=0x27F, data=[0x50, 0x57, 0x4D, 0x31, 0x00, 0x00], extended_id=False)
         bus.send(msg)
-        GPIO.output(FAN_PIN, GPIO.LOW)
+        GPIO.output(FAN_PIN, GPIO.HIGH)
 
     def BicepC_clicked(self):
         BCT = self.BCtime.value()
         for i in range(1,BCT):
-            GPIO.output(FAN_PIN, GPIO.LOW)
+            GPIO.output(FAN_PIN, GPIO.HIGH)
             time.sleep(0.1)
-        GPIO.output(FAN_PIN, GPIO.HIGH)
+        GPIO.output(FAN_PIN, GPIO.LOW)
 
     def BicepHC_clicked(self):
         self.BicepH_clicked()
@@ -137,7 +137,7 @@ class MyWindow(QMainWindow, form_class):
         global BT
         THT = self.THtime.value()
         for i in range(1, THT):
-            GPIO.output(FAN2_PIN, GPIO.HIGH)
+            GPIO.output(FAN2_PIN, GPIO.LOW)
             PWM2 = PWM * 1023 // 100
             PWMH = PWM2 // 256
             PWML = PWM2 - PWMH * 256
@@ -151,14 +151,14 @@ class MyWindow(QMainWindow, form_class):
             time.sleep(0.1)
         msg = can.Message(arbitration_id=0x27F, data=[0x50, 0x57, 0x4D, 0x32, 0x00, 0x00], extended_id=False)
         bus.send(msg)
-        GPIO.output(FAN2_PIN, GPIO.LOW)
+        GPIO.output(FAN2_PIN, GPIO.HIGH)
 
     def TricepC_clicked(self):
         TCT = self.TCtime.value()
         for i in range(1,TCT):
-            GPIO.output(FAN2_PIN, GPIO.LOW)
+            GPIO.output(FAN2_PIN, GPIO.HIGH)
             time.sleep(0.1)
-        GPIO.output(FAN2_PIN, GPIO.HIGH)
+        GPIO.output(FAN2_PIN, GPIO.LOW)
 
     def TricepHC_clicked(self):
         self.TricepH_clicked()
@@ -205,7 +205,7 @@ class MyWindow(QMainWindow, form_class):
                 break
         msg = can.Message(arbitration_id=0x27F, data=[0x50, 0x57, 0x4D, 0x31, 0x00, 0x00], extended_id=False)
         bus.send(msg)
-        GPIO.output(FAN_PIN, GPIO.LOW)
+        GPIO.output(FAN_PIN, GPIO.HIGH)
 
     def TTH_clicked(self):
         print("Start to check Bicep temperature")
@@ -236,7 +236,7 @@ class MyWindow(QMainWindow, form_class):
                 break
         msg = can.Message(arbitration_id=0x27F, data=[0x50, 0x57, 0x4D, 0x32, 0x00, 0x00], extended_id=False)
         bus.send(msg)
-        GPIO.output(FAN2_PIN, GPIO.LOW)
+        GPIO.output(FAN2_PIN, GPIO.HIGH)
 
     def AngZ_clicked(self):
         myEncoder.zero()
@@ -269,10 +269,10 @@ class MyWindow(QMainWindow, form_class):
             DA = OA - Angle
 
             if DA < 0:
-                GPIO.output(FAN_PIN, GPIO.LOW)
+                GPIO.output(FAN_PIN, GPIO.GIGH)
                 PWM = 0
             else:
-                GPIO.output(FAN_PIN, GPIO.HIGH)
+                GPIO.output(FAN_PIN, GPIO.LOW)
                 PWM = DA * P_gain
 
             self.BicepTemp.display(BT)
@@ -290,13 +290,13 @@ class MyWindow(QMainWindow, form_class):
         Temp = message.data[2] + message.data[3] * 256
         BT = Temp // 50 - 273
         self.BicepTemp.display(BT)
-        GPIO.output(FAN_PIN, GPIO.LOW)
+        GPIO.output(FAN_PIN, GPIO.HIGH)
 
     def Stop_clicked(self):
         global Stop_push
         Stop_push = True
-        GPIO.output(FAN_PIN, GPIO.HIGH)
-        GPIO.output(FAN2_PIN, GPIO.HIGH)
+        GPIO.output(FAN_PIN, GPIO.LOW)
+        GPIO.output(FAN2_PIN, GPIO.LOW)
         msg = can.Message(arbitration_id=0x27F, data=[0x50, 0x57, 0x4D, 0x31, 0x00, 0x00], extended_id=False)
         bus.send(msg)
         message = bus.recv(1.0)
@@ -308,7 +308,7 @@ class MyWindow(QMainWindow, form_class):
         message = bus.recv(1.0)
         TTemp = message.data[2] + message.data[3] * 256
         TT = TTemp // 50 - 273
-        self.TriicepTemp.display(TT)
+        self.TricepTemp.display(TT)
         Angle = -myEncoder.position * 360 // 8192
         self.Alcd.display(Angle)
 
