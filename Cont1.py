@@ -178,7 +178,7 @@ class MyWindow(QMainWindow, form_class):
 
     def BTH_clicked(self):
         print("Start to check Bicep temperature")
-        worker = Worker(self.BTContol)
+        worker = Worker(self.BTControl)
         self.threadpool.start(worker)
         print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
 
@@ -209,7 +209,7 @@ class MyWindow(QMainWindow, form_class):
 
     def TTH_clicked(self):
         print("Start to check Bicep temperature")
-        worker = Worker(self.TTContol)
+        worker = Worker(self.TTControl)
         self.threadpool.start(worker)
         print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
 
