@@ -210,6 +210,7 @@ class MyWindow(QMainWindow, form_class):
             message = bus.recv(1.0)
             Temp = message.data[2] + message.data[3] * 256
             BT = Temp // 50 - 273
+            self.BicepTemp.display(BT)
             time.sleep(0.1)
             if BT > DBT:
                 break
@@ -241,6 +242,7 @@ class MyWindow(QMainWindow, form_class):
             message = bus.recv(1.0)
             Temp = message.data[2] + message.data[3] * 256
             TT = Temp // 50 - 273
+            self.TricepTemp.display(TT)
             time.sleep(0.1)
             if TT > DTT:
                 break
