@@ -101,6 +101,18 @@ class MyWindow(QMainWindow, form_class):
         time.sleep(0.1)
 
     def BicepH_clicked(self):
+        print("Start to check Bicep temperature")
+        worker = Worker(self.B_time_heating)
+        self.threadpool.start(worker)
+        print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
+
+    def TricepH_clicked(self):
+        print("Start to check Bicep temperature")
+        worker = Worker(self.T_time_heating)
+        self.threadpool.start(worker)
+        print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
+
+    def B_time_heating(self):
         global PWM
         global BT
         BHT = self.BHtime.value()
@@ -132,7 +144,7 @@ class MyWindow(QMainWindow, form_class):
         self.BicepH_clicked()
         self.BicepC_clicked()
 
-    def TricepH_clicked(self):
+    def T_time_heating(self):
         global PWM
         global BT
         THT = self.THtime.value()
