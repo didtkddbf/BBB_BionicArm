@@ -8,10 +8,10 @@ from Adafruit_AMG88xx import Adafruit_AMG88xx
 
 myEncoder = RotaryEncoder(eQEP2)
 myEncoder.enable()
-sensor = Adafruit_AMG88xx()
+sensor = Adafruit_AMG88xx(address=0x69, busnum=2)
 
 ADC.setup()
-analogPin="P9_40"
+analogPin="P9_39"
 Act = 'P8_7'
 Actt = 'P8_9'
 Fan = 'P8_11'
@@ -20,12 +20,16 @@ GPIO.setup(Act, GPIO.OUT)
 GPIO.setup(Actt, GPIO.OUT)
 GPIO.setup(Fan, GPIO.OUT)
 GPIO.setup(Fann, GPIO.OUT)
+GPIO.output(Act, GPIO.HIGH)
+
+
 
 f = raw_input('file name : ')
 filename = f + '.txt'
 tdata = open(filename, 'a+')
 
 tdata.write("Cal_Disp(mm),Temperature('c),Time(s) \n")
+a=0
 
 while a!=4:
     a= int(input('act=1, cool=2, cycle=3, stop=4 '))
@@ -39,18 +43,18 @@ while a!=4:
             distance = myEncoder.position * 0.01
             temp = max(sensor.readPixels())
             Vr=ADC.read(analogPin)
-            R=10000*Vr/(5-Vr)
+            R=10000*Vr/(1.8-Vr)
             print("%.2f,%d,%d,%.1f" % (distance, temp, R, count*0.1))
-            tdata.write("%.2f,%d,%.1f" % (distance, temp, R, count*0.1))
+            tdata.write("%.2f,%d,%d,%.1f" % (distance, temp, R, count*0.1))
             time.sleep(0.1)
         GPIO.output(Act, GPIO.HIGH)
-        for count in range(b,b+101):
+        for count in range(b,b+11):
             distance = myEncoder.position * 0.01
             temp = max(sensor.readPixels())
             Vr=ADC.read(analogPin)
-            R=10000*Vr/(5-Vr)
+            R=10000*Vr/(1.8-Vr)
             print("%.2f,%d,%d,%.1f" % (distance, temp, R, count*0.1))
-            tdata.write("%.2f,%d,%.1f" % (distance, temp, R, count*0.1))
+            tdata.write("%.2f,%d,%d,%.1f" % (distance, temp, R, count*0.1))
             time.sleep(0.1)
 
     elif a==2:
@@ -62,9 +66,9 @@ while a!=4:
             distance = myEncoder.position * 0.01
             temp = max(sensor.readPixels())
             Vr=ADC.read(analogPin)
-            R=10000*Vr/(5-Vr)
+            R=10000*Vr/(1.8-Vr)
             print("%.2f,%d,%d,%.1f" % (distance, temp, R, count*0.1))
-            tdata.write("%.2f,%d,%.1f" % (distance, temp, R, count*0.1))
+            tdata.write("%.2f,%d,%d,%.1f" % (distance, temp, R, count*0.1))
             time.sleep(0.1)
         GPIO.output(Fan, GPIO.HIGH)
 
@@ -81,9 +85,9 @@ while a!=4:
                 distance = myEncoder.position * 0.01
                 temp = max(sensor.readPixels())
                 Vr = ADC.read(analogPin)
-                R = 10000 * Vr / (5 - Vr)
+                R = 10000 * Vr / (1.8 - Vr)
                 print("%.2f,%d,%d,%.1f" % (distance, temp, R, count * 0.1))
-                tdata.write("%.2f,%d,%.1f" % (distance, temp, R, count * 0.1))
+                tdata.write("%.2f,%d,%d,%.1f" % (distance, temp, R, count * 0.1))
                 time.sleep(0.1)
             GPIO.output(Act, GPIO.HIGH)
             for count in range(1, c):
@@ -91,12 +95,16 @@ while a!=4:
                 distance = myEncoder.position * 0.01
                 temp = max(sensor.readPixels())
                 Vr = ADC.read(analogPin)
-                R = 10000 * Vr / (5 - Vr)
+                R = 10000 * Vr / (1.8 - Vr)
                 print("%.2f,%d,%d,%.1f" % (distance, temp, R, count * 0.1))
-                tdata.write("%.2f,%d,%.1f" % (distance, temp, R, count * 0.1))
+                tdata.write("%.2f,%d,%d,%.1f" % (distance, temp, R, count * 0.1))
                 time.sleep(0.1)
             GPIO.output(Fan, GPIO.HIGH)
         GPIO.output(Act, GPIO.HIGH)
         GPIO.output(Fan, GPIO.HIGH)
+    elif a==5:
+        myEncoder.zero()
+
+
 
 tdata.close()
