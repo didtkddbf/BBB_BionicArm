@@ -40,7 +40,7 @@ while a!=4:
         GPIO.output(Act, GPIO.LOW)
         tdata.write("Cal_Disp(mm),Temperature('c),Resistance(ohm),Time(s) \n")
         for count in range(1,b):
-            distance = myEncoder.position * 0.01
+            distance = myEncoder.position * 0.02
             temp = max(sensor.readPixels())
             Vr=ADC.read(analogPin)
             R=10000*Vr/(1.8-Vr)
@@ -49,7 +49,7 @@ while a!=4:
             time.sleep(0.1)
         GPIO.output(Act, GPIO.HIGH)
         for count in range(b,b+11):
-            distance = myEncoder.position * 0.01
+            distance = myEncoder.position * 0.02
             temp = max(sensor.readPixels())
             Vr=ADC.read(analogPin)
             R=10000*Vr/(1.8-Vr)
@@ -63,7 +63,7 @@ while a!=4:
         GPIO.output(Fan, GPIO.LOW)
         tdata.write("Cal_Disp, mm, Sen_Disp, mm, Temperature, 'c, Time, s \n")
         for count in range(1,b):
-            distance = myEncoder.position * 0.01
+            distance = myEncoder.position * 0.02
             temp = max(sensor.readPixels())
             Vr=ADC.read(analogPin)
             R=10000*Vr/(1.8-Vr)
@@ -78,25 +78,29 @@ while a!=4:
         cy = int(input('cycle number : '))
         h = ht*10+1
         c = ct*10+1
-        tdata.write("Cal_Disp(mm),Temperature('c),Time(s) \n")
-        D = 0
+        tdata.write("Cal_Disp(mm),Temperature('c),Resistance(Ohm),Time(s) \n")
+        distance = 0.00
+        count = 0.0
         for cycle in range(1, cy):
-            while D < ht:
+            while distance < ht:
                 GPIO.output(Act, GPIO.LOW)
-                D = myEncoder.position * 0.01
+                distance = -myEncoder.position * 0.02
                 temp = max(sensor.readPixels())
                 Vr = ADC.read(analogPin)
                 R = 10000 * Vr / (1.8 - Vr)
+                R = 10000 * Vr / (1.8 - Vr)
+                count = count+1
                 print("%.2f,%d,%d,%.1f\n" % (distance, temp, R, count * 0.1))
                 tdata.write("%.2f,%d,%d,%.1f\n" % (distance, temp, R, count * 0.1))
                 time.sleep(0.1)
             GPIO.output(Act, GPIO.HIGH)
-            while D > ct:
+            while distance > ct:
                 GPIO.output(Fan, GPIO.LOW)
-                D = myEncoder.position * 0.01
+                distance = -myEncoder.position * 0.02
                 temp = max(sensor.readPixels())
                 Vr = ADC.read(analogPin)
                 R = 10000 * Vr / (1.8 - Vr)
+                count = count+1
                 print("%.2f,%d,%d,%.1f\n" % (distance, temp, R, count * 0.1))
                 tdata.write("%.2f,%d,%d,%.1f\n" % (distance, temp, R, count * 0.1))
                 time.sleep(0.1)
