@@ -76,8 +76,6 @@ while a!=4:
         ht = int(input('Displacement 1(mm) : '))
         ct = int(input('Displacement 2(mm) : '))
         cy = int(input('cycle number : '))
-        h = ht*10+1
-        c = ct*10+1
         tdata.write("Cal_Disp(mm),Temperature('c),Resistance(Ohm),Time(s) \n")
         distance = 0.00
         count = 0.00
@@ -89,10 +87,10 @@ while a!=4:
                 distance = -myEncoder.position * 0.02
                 temp = max(sensor.readPixels())
                 Vr = ADC.read(analogPin)
-                R = 100.00 * Vr / (1.80 - Vr)
+                R = 99.00 * Vr / (1.80 - Vr)
                 count = count+1
-                print("%.2f,%.2f,%.2f,%.1f\n" % (distance, temp, R, count * 0.1))
-                tdata.write("%.2f,%.2f,%.2f,%.1f\n" % (distance, temp, R, count * 0.1))
+                print("%.2f,%.2f,%.2f,%.1f,%d" % (distance, temp, R, count * 0.1, cycle))
+                tdata.write("%.2f,%.2f,%.2f,%.1f,%d\n" % (distance, temp, R, count * 0.1, cycle))
                 time.sleep(0.5)
             GPIO.output(Act, GPIO.HIGH)
             while distance > ct:
@@ -100,10 +98,10 @@ while a!=4:
                 distance = -myEncoder.position * 0.02
                 temp = max(sensor.readPixels())
                 Vr = ADC.read(analogPin)
-                R = 100.00* Vr / (1.8 - Vr)
+                R = 99.00* Vr / (1.8 - Vr)
                 count = count+1
-                print("%.2f,%.2f,%.2f,%.1f\n" % (distance, temp, R, count * 0.1))
-                tdata.write("%.2f,%.2f,%.2f,%.1f\n" % (distance, temp, R, count * 0.1))
+                print("%.2f,%.2f,%.2f,%.1f,%d" % (distance, temp, R, count * 0.1, cycle))
+                tdata.write("%.2f,%.2f,%.2f,%.1f,%d\n" % (distance, temp, R, count * 0.1, cycle))
                 time.sleep(0.5)
             GPIO.output(Fan, GPIO.HIGH)
         GPIO.output(Act, GPIO.HIGH)
