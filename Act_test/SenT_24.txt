@@ -1,0 +1,4 @@
+Cal_Disp(mm),Temperature('c),Time(s) 
+Cal_Disp(mm),Temperature('c),Resistance(Ohm),Time(s) 
+0.00,26.25,50.80,0.1
+0.00,26.25,50.80,0.2
