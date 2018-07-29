@@ -12,15 +12,15 @@ sensor = MLX90614(address=0x5a,bus_num=2)
 #ADC.setup()
 #analogPin="P9_39"
 Act = 'P8_7'
-Actt = 'P8_9'
-Fan = 'P8_11'
-Fann = 'P8_15'
+#Actt = 'P8_9'
+Fan = 'P8_9'
+#Fann = 'P8_15'
 GPIO.setup(Act, GPIO.OUT)
-GPIO.setup(Actt, GPIO.OUT)
+#GPIO.setup(Actt, GPIO.OUT)
 GPIO.setup(Fan, GPIO.OUT)
-GPIO.setup(Fann, GPIO.OUT)
+#GPIO.setup(Fann, GPIO.OUT)
 GPIO.output(Act, GPIO.HIGH)
-
+GPIO.output(Fan, GPIO.HIGH)
 
 
 f = raw_input('file name : ')
@@ -42,7 +42,7 @@ while a!=4:
         for count in range(1,b):
             distance = myEncoder.position * 0.02
             temp = sensor.get_obj_temp()
-            Vr=ADC.read(analogPin)
+#            Vr=ADC.read(analogPin)
 #            R=10000*Vr/(1.8-Vr)
             print("%.2f,%d,%d,%.1f\n" % (distance, temp, R, count * 0.1))
             tdata.write("%.2f,%d,%d,%.1f\n" % (distance, temp, R, count * 0.1))
@@ -50,9 +50,9 @@ while a!=4:
         GPIO.output(Act, GPIO.HIGH)
         for count in range(b,b+11):
             distance = myEncoder.position * 0.02
-            temp = max(sensor.readPixels())
-            Vr=ADC.read(analogPin)
-            R=10000*Vr/(1.8-Vr)
+            temp = sensor.get_obj_temp()
+#            Vr=ADC.read(analogPin)
+#            R=10000*Vr/(1.8-Vr)
             print("%.2f,%d,%d,%.1f\n" % (distance, temp, R, count * 0.1))
             tdata.write("%.2f,%d,%d,%.1f\n" % (distance, temp, R, count * 0.1))
             time.sleep(0.1)
@@ -89,8 +89,8 @@ while a!=4:
 #                Vr = ADC.read(analogPin)
 #                R = 99.00 * Vr / (1.80 - Vr)
                 count = count+1
-                print("%.2f,%.2f,%.2f,%.1f,%d" % (distance, temp, R, count * 0.1, cycle))
-                tdata.write("%.2f,%.2f,%.2f,%.1f,%d\n" % (distance, temp, R, count * 0.1, cycle))
+                print("%.2f,%.2f,%.2f,%.1f,%d" % (distance, temp, R, count * 0.5, cycle))
+                tdata.write("%.2f,%.2f,%.2f,%.1f,%d\n" % (distance, temp, R, count * 0.5, cycle))
                 time.sleep(0.5)
             GPIO.output(Act, GPIO.HIGH)
             while temp > ct:
@@ -100,8 +100,8 @@ while a!=4:
 #                Vr = ADC.read(analogPin)
 #                R = 99.00* Vr / (1.8 - Vr)
                 count = count+1
-                print("%.2f,%.2f,%.2f,%.1f,%d" % (distance, temp, R, count * 0.1, cycle))
-                tdata.write("%.2f,%.2f,%.2f,%.1f,%d\n" % (distance, temp, R, count * 0.1, cycle))
+                print("%.2f,%.2f,%.2f,%.1f,%d" % (distance, temp, R, count * 0.5, cycle))
+                tdata.write("%.2f,%.2f,%.2f,%.1f,%d\n" % (distance, temp, R, count * 0.5, cycle))
                 time.sleep(0.5)
             GPIO.output(Fan, GPIO.HIGH)
         GPIO.output(Act, GPIO.HIGH)
