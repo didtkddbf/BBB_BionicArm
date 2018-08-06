@@ -1,0 +1,17 @@
+Test start,start,start,start
+Test start,start,start,start
+Cal_Disp, mm, Sen_Disp, mm, Temperature, 'c, Time, s 
+0.04,24,0,0.1
+0.06,24,0,0.2
+0.06,24,0,0.3
+0.06,24,0,0.4
+0.06,24,0,0.5
+Test start,start,start,start
+Cal_Disp(mm),Temperature('c),Resistance(Ohm),Time(s) 
+-0.02,24.47,0.00,2.0,1
+-0.02,24.27,0.00,4.0,1
+-0.02,24.69,0.00,6.0,1
+-0.02,24.39,0.00,8.0,1
+-0.02,24.39,0.00,10.0,1
+-0.02,24.51,0.00,12.0,1
+-0.02,24.29,0.00,14.0,1
