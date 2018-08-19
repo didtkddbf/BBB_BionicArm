@@ -1,2 +1,0 @@
-Test start,start,start,start
-Cal_Disp(mm),Temperature('c),Resistance(Ohm),Time(s) 
