@@ -6,6 +6,8 @@ import RPi.GPIO as GPIO
 from PyQt5.QtCore import *
 from Adafruit_AMG88xx import Adafruit_AMG88xx
 
+form_class = uic.loadUiType("uitest4.ui")[0]
+
 
 #Motor driver setting
 GPIO.setmode(GPIO.BCM)			# GPIO numbering
@@ -18,9 +20,12 @@ GPIO.setup(AN2, GPIO.OUT)		# set pin as output
 GPIO.setup(AN1, GPIO.OUT)		# set pin as output
 GPIO.setup(DIG2, GPIO.OUT)		# set pin as output
 GPIO.setup(DIG1, GPIO.OUT)		# set pin as output
-sleep(1)				# delay for 1 seconds
+time.sleep(1)				# delay for 1 seconds
 pB = GPIO.PWM(DIG1, 100)		# set pwm for M1
 pT = GPIO.PWM(DIG2, 100)		# set pwm for M2
+pB.start(0)
+pT.start(0)
+
 #Fan setting
 FAN_PIN = 16
 FAN2_PIN = 18
@@ -29,8 +34,8 @@ GPIO.setup(FAN2_PIN, GPIO.OUT)
 GPIO.output(FAN_PIN, GPIO.LOW)
 GPIO.output(FAN2_PIN, GPIO.LOW)
 
-#sensor = Adafruit_AMG88xx(address=0x69, busnum=2)
-#sensor2 = Adafruit_AMG88xx(address=0x69, busnum=2)
+sensor = Adafruit_AMG88xx(address=0x69, busnum=1)
+sensor2 = Adafruit_AMG88xx(address=0x68, busnum=1)
 
 class Worker(QRunnable):
     '''
@@ -64,7 +69,6 @@ class MyWindow(QMainWindow, form_class):
     BHT = 0
     PWM = 50
     P_gain = 2
-
     def __init__(self, *args, **kwargs):
         super(MyWindow, self).__init__(*args, **kwargs)
         self.setupUi(self)
@@ -74,7 +78,6 @@ class MyWindow(QMainWindow, form_class):
         BT=24
         PWM = self.PWM
         P_gain = self.P_gain
-        msg =self.msg
         self.BicepTemp_S.clicked.connect(self.BicepTemp_S_clicked)
         self.TricepTemp_S.clicked.connect(self.TricepTemp_S_clicked)
         self.BicepH.clicked.connect(self.BicepH_clicked)
