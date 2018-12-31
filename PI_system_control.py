@@ -124,12 +124,13 @@ class MyWindow(QMainWindow, form_class):
         BHT = self.BHtime.value()
         GPIO.output(FAN_PIN, GPIO.LOW)
         for i in range(1, BHT):
-            pB.start(PWM)
+            pB.ChangeDutyCycle(PWM)
             BT = max(sensor.readPixels())
             print(i * 0.1, BT)
             self.BicepTemp.display(BT)
             time.sleep(0.1)
         GPIO.output(FAN_PIN, GPIO.HIGH)
+        pB.ChangeDutyCycle(0)
 
     def BicepC_clicked(self):
         BCT = self.BCtime.value()
@@ -148,12 +149,13 @@ class MyWindow(QMainWindow, form_class):
         THT = self.THtime.value()
         GPIO.output(FAN2_PIN, GPIO.LOW)
         for i in range(1, THT):
-            pT.start(PWM)
+            pT.ChangeDutyCycle(PWM)
             TT = max(sensor2.readPixels())
             print(i * 0.1, TT)
             self.TricepTemp.display(TT)
             time.sleep(0.1)
         GPIO.output(FAN2_PIN, GPIO.HIGH)
+        pT.ChangeDutyCycle(0)
 
     def TricepC_clicked(self):
         TCT = self.TCtime.value()
@@ -197,7 +199,7 @@ class MyWindow(QMainWindow, form_class):
             PWM = (DBT - BT)*P_gain
             if PWM > 100:
                 PWM = 100
-            pB.start(PWM)
+            pB.ChangeDutyCycle(PWM)
             BT = max(sensor.readPixels())
             self.BicepTemp.display(BT)
             time.sleep(0.1)
@@ -206,6 +208,7 @@ class MyWindow(QMainWindow, form_class):
             if Stop_push == True:
                 break
         GPIO.output(FAN_PIN, GPIO.HIGH)
+        pB.ChangeDutyCycle(0)
 
     def TTH_clicked(self):
         print("Start to check Bicep temperature")
@@ -225,7 +228,7 @@ class MyWindow(QMainWindow, form_class):
             PWM = (DTT - TT)*P_gain
             if PWM > 100:
                 PWM = 100
-            pT.start(PWM)
+            pT.ChangeDutyCycle(PWM)
             TT = max(sensor2.readPixels())
             self.TricepTemp.display(TT)
             time.sleep(0.1)
@@ -234,6 +237,7 @@ class MyWindow(QMainWindow, form_class):
             if Stop_push == True:
                 break
         GPIO.output(FAN2_PIN, GPIO.HIGH)
+        pT.ChangeDutyCycle(0)
 
     # def AngZ_clicked(self):
     #     myEncoder.zero()
@@ -308,8 +312,8 @@ class MyWindow(QMainWindow, form_class):
     def Stop_clicked(self):
         global Stop_push
         Stop_push = True
-        pB.start(0)
-        pT.start(0)
+        pB.ChangeDutyCycle(0)
+        pT.ChangeDutyCycle(0)
         GPIO.output(FAN_PIN, GPIO.LOW)
         GPIO.output(FAN2_PIN, GPIO.LOW)
         BT = max(sensor.readPixels())
