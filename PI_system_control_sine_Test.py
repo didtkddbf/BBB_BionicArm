@@ -42,7 +42,7 @@ dt =  20
 
 GPIO.setup(clk, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 GPIO.setup(dt, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-Encoder_A, Encoder_B = GPIO.input(clk), GPIO.input(dk)
+Encoder_A, Encoder_B = GPIO.input(clk), GPIO.input(dt)
 Encoder_A_old, Encoder_B_old = Encoder_A, Encoder_B
 
 def my_callback(channel):
@@ -53,28 +53,29 @@ def my_callback(channel):
     global Encoder_B_old
     global error
 
-    Encoder_A, Encoder_B = GPIO.input(clk), GPIO.input(dk)
+    Encoder_A, Encoder_B = GPIO.input(clk), GPIO.input(dt)
 
     if ((Encoder_A, Encoder_B_old) == (1, 0)) or ((Encoder_A, Encoder_B_old) == (0, 1)):
         # this will be clockwise rotation
         counts += 1
-        print ('Encoder count is %s\nAB is %s %s' % (counts, Encoder_A, Encoder_B))
+        #print ('Encoder count is %s\nAB is %s %s' % (counts, Encoder_A, Encoder_B))
 
     elif ((Encoder_A, Encoder_B_old) == (1, 1)) or ((Encoder_A, Encoder_B_old) == (0, 0)):
         # this will be counter-clockwise rotation
         counts -= 1
-        print ('Encoder count is %s\nAB is %s %s' % (counts, Encoder_A, Encoder_B))
+        #print ('Encoder count is %s\nAB is %s %s' % (counts, Encoder_A, Encoder_B))
 
     else:
         # this will be an error
         error += 1
-        print ('Error count is %s' % error)
+        #print ('Error count is %s' % error)
 
     Encoder_A_old, Encoder_B_old = Encoder_A, Encoder_B
 
-counter = 0
-GPIO.add_event_detect(16, GPIO.FALLING  , callback=my_callback, bouncetime=1)
-GPIO.add_event_detect(20, GPIO.FALLING  , callback=my_callback, bouncetime=1)
+global counts
+counts = 0
+GPIO.add_event_detect(16, GPIO.BOTH  , callback=my_callback)
+GPIO.add_event_detect(20, GPIO.BOTH  , callback=my_callback)
 
 a=0
 
@@ -83,19 +84,23 @@ try:
         a = int(input('check=1, zero=2, temp=3, stop=4 '))
 
         if a==1:
-            for i in range(1,10):
+            for i in range(1,100):
            	 print (counts)
-           	 time.sleep(0.5)
+           	 time.sleep(0.1)
 
         elif a==2:
-            counter = 0
+            counts = 0
 
         elif a==3:
             print(max(sensor.readPixels()))
             print(max(sensor2.readPixels()))
 
-except KeyboardInterrupt:
-    print ("ctl+c")
+        elif a==5:
+            for i in range(1,100):
+                 print (counts*360/8192)
+                 time.sleep(0.1)
+
+
 
 except:
     # this catches ALL other exceptions including errors.
