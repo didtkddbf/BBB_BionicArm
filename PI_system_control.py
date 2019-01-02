@@ -21,14 +21,15 @@ GPIO.setup(AN1, GPIO.OUT)		# set pin as output
 GPIO.setup(DIG2, GPIO.OUT)		# set pin as output
 GPIO.setup(DIG1, GPIO.OUT)		# set pin as output
 time.sleep(1)				# delay for 1 seconds
-pB = GPIO.PWM(DIG1, 100)		# set pwm for M1
-pT = GPIO.PWM(DIG2, 100)		# set pwm for M2
+pB = GPIO.PWM(AN1, 100)		# set pwm for M1
+pT = GPIO.PWM(AN2, 100)		# set pwm for M2
 pB.start(0)
 pT.start(0)
-
+GPIO.output(DIG1, GPIO.LOW)
+GPIO.output(DIG2, GPIO.LOW)
 #Fan setting
-FAN_PIN = 16
-FAN2_PIN = 18
+FAN_PIN = 23
+FAN2_PIN = 22
 GPIO.setup(FAN_PIN, GPIO.OUT)
 GPIO.setup(FAN2_PIN, GPIO.OUT)
 GPIO.output(FAN_PIN, GPIO.LOW)
@@ -232,7 +233,7 @@ class MyWindow(QMainWindow, form_class):
             TT = max(sensor2.readPixels())
             self.TricepTemp.display(TT)
             time.sleep(0.1)
-            if BT > DBT:
+            if TT > DTT:
                 break
             if Stop_push == True:
                 break
