@@ -232,7 +232,7 @@ class MyWindow(QMainWindow, form_class):
             TT = max(sensor2.readPixels())
             self.TricepTemp.display(TT)
             time.sleep(0.1)
-            if BT > DBT:
+            if TT > DTT:
                 break
             if Stop_push == True:
                 break
