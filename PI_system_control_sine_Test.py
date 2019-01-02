@@ -44,6 +44,7 @@ GPIO.setup(clk, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 GPIO.setup(dt, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 clkLastState = GPIO.input(clk)
+
 def my_callback(channel):
     global clkLastState
     global counter
@@ -56,22 +57,24 @@ def my_callback(channel):
                         else:
                                 counter -= 1
                 clkLastState = clkState
-                #sleep(0.01)
+                print(counter)
+                #sleep(0.0)
     finally:
-                print "Ending"
+                print("??")
 
 counter = 0
 clkLastState = GPIO.input(clk)
-GPIO.add_event_detect(17, GPIO.FALLING  , callback=my_callback, bouncetime=300)
+GPIO.add_event_detect(16, GPIO.FALLING  , callback=my_callback, bouncetime=1)
+a=0
 
 try:
     while a!=4:
-        a = int(input('check=1, zero=2, temp'=3, stop=4 '))
+        a = int(input('check=1, zero=2, temp=3, stop=4 '))
 
         if a==1:
-            for in range(1,10)
-            print counter
-            time.sleep(0.5)
+            for i in range(1,10):
+           	 print (counter)
+           	 time.sleep(0.5)
 
         elif a==2:
             counter = 0
@@ -81,13 +84,13 @@ try:
             print(max(sensor2.readPixels()))
 
 except KeyboardInterrupt:
-    print "ctl+c"
+    print ("ctl+c")
 
 except:
     # this catches ALL other exceptions including errors.
     # You won't get any error messages for debugging
     # so only use it once your code is working
-    print "Other error or exception occurred!"
+    print ("Other error or exception occurred!")
 
 finally:
     GPIO.cleanup()  # this ensures a clean exit
