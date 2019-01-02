@@ -42,29 +42,40 @@ dt =  20
 
 GPIO.setup(clk, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 GPIO.setup(dt, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-
-clkLastState = GPIO.input(clk)
+Encoder_A, Encoder_B = GPIO.input(clk), GPIO.input(dk)
+Encoder_A_old, Encoder_B_old = Encoder_A, Encoder_B
 
 def my_callback(channel):
-    global clkLastState
-    global counter
-    try:
-                clkState = GPIO.input(clk)
-                if clkState != clkLastState:
-                        dtState = GPIO.input(dt)
-                        if dtState != clkState:
-                                counter += 1
-                        else:
-                                counter -= 1
-                clkLastState = clkState
-                print(counter)
-                #sleep(0.0)
-    finally:
-                print("??")
+    global counts
+    global Encoder_A
+    global Encoder_A_old
+    global Encoder_B
+    global Encoder_B_old
+    global error
+
+    Encoder_A, Encoder_B = GPIO.input(clk), GPIO.input(dk)
+
+    if ((Encoder_A, Encoder_B_old) == (1, 0)) or ((Encoder_A, Encoder_B_old) == (0, 1)):
+        # this will be clockwise rotation
+        counts += 1
+        print ('Encoder count is %s\nAB is %s %s' % (counts, Encoder_A, Encoder_B))
+
+    elif ((Encoder_A, Encoder_B_old) == (1, 1)) or ((Encoder_A, Encoder_B_old) == (0, 0)):
+        # this will be counter-clockwise rotation
+        counts -= 1
+        print ('Encoder count is %s\nAB is %s %s' % (counts, Encoder_A, Encoder_B))
+
+    else:
+        # this will be an error
+        error += 1
+        print ('Error count is %s' % error)
+
+    Encoder_A_old, Encoder_B_old = Encoder_A, Encoder_B
 
 counter = 0
-clkLastState = GPIO.input(clk)
 GPIO.add_event_detect(16, GPIO.FALLING  , callback=my_callback, bouncetime=1)
+GPIO.add_event_detect(20, GPIO.FALLING  , callback=my_callback, bouncetime=1)
+
 a=0
 
 try:
@@ -73,7 +84,7 @@ try:
 
         if a==1:
             for i in range(1,10):
-           	 print (counter)
+           	 print (counts)
            	 time.sleep(0.5)
 
         elif a==2:
