@@ -37,6 +37,51 @@ GPIO.output(FAN2_PIN, GPIO.LOW)
 sensor = Adafruit_AMG88xx(address=0x69, busnum=1)
 sensor2 = Adafruit_AMG88xx(address=0x68, busnum=1)
 
+
+##############encoder setting
+clk = 16
+dt =  20
+
+GPIO.setup(clk, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+GPIO.setup(dt, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+Encoder_A, Encoder_B = GPIO.input(clk), GPIO.input(dk)
+Encoder_A_old, Encoder_B_old = Encoder_A, Encoder_B
+
+def my_callback(channel):
+    global counts
+    global Encoder_A
+    global Encoder_A_old
+    global Encoder_B
+    global Encoder_B_old
+    global error
+
+    Encoder_A, Encoder_B = GPIO.input(clk), GPIO.input(dk)
+
+    if ((Encoder_A, Encoder_B_old) == (1, 0)) or ((Encoder_A, Encoder_B_old) == (0, 1)):
+        # this will be clockwise rotation
+        counts += 1
+        print ('Encoder count is %s\nAB is %s %s' % (counts, Encoder_A, Encoder_B))
+
+    elif ((Encoder_A, Encoder_B_old) == (1, 1)) or ((Encoder_A, Encoder_B_old) == (0, 0)):
+        # this will be counter-clockwise rotation
+        counts -= 1
+        print ('Encoder count is %s\nAB is %s %s' % (counts, Encoder_A, Encoder_B))
+
+    else:
+        # this will be an error
+        error += 1
+        print ('Error count is %s' % error)
+
+    Encoder_A_old, Encoder_B_old = Encoder_A, Encoder_B
+
+global counts
+counts = 0
+GPIO.add_event_detect(16, GPIO.FALLING  , callback=my_callback, bouncetime=1)
+GPIO.add_event_detect(20, GPIO.FALLING  , callback=my_callback, bouncetime=1)
+############################################
+
+
+
 class Worker(QRunnable):
     '''
     Worker thread
@@ -240,8 +285,9 @@ class MyWindow(QMainWindow, form_class):
         pT.ChangeDutyCycle(0)
 
      def AngZ_clicked(self):
-         myEncoder.zero()
-         Angle = -myEncoder.position*360//8192
+         global counts
+         counts = 0
+         Angle = -counts*360//8192
          self.Alcd.display(Angle)
 
      def AngH_clicked(self):
@@ -254,12 +300,13 @@ class MyWindow(QMainWindow, form_class):
         global PWM
         global P_gain
         global Stop_push
+        global counts
         OAA = self.DesA.value()
         Stop_push = True
         Stop_push = False
         count=0
         while Stop_push != True:
-            Angle = -myEncoder.position *360 //8192
+            Angle = -counts *360 //8192
             OA = OAA - 20 + 20*math.sin(math.pi/4*count)
             DA = OA - Angle
             if DA > 0:
@@ -301,6 +348,7 @@ class MyWindow(QMainWindow, form_class):
 
     def Stop_clicked(self):
         global Stop_push
+        global counts
         Stop_push = True
         pB.ChangeDutyCycle(0)
         pT.ChangeDutyCycle(0)
@@ -310,8 +358,8 @@ class MyWindow(QMainWindow, form_class):
         TT = max(sensor2.readPixels())
         self.BicepTemp.display(BT)
         self.TricepTemp.display(TT)
-        # Angle = -myEncoder.position * 360 // 8192
-        # self.Alcd.display(Angle)
+        Angle = -counts * 360 // 8192
+        self.Alcd.display(Angle)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
