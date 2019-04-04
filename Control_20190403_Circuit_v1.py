@@ -2,21 +2,71 @@ import sys
 import time
 from PyQt5.QtWidgets import *
 from PyQt5 import uic
-import Adafruit_BBIO.GPIO as GPIO
 import can
 from PyQt5.QtCore import *
-from Adafruit_BBIO.Encoder import RotaryEncoder, eQEP2
 
-form_class = uic.loadUiType("uitest4.ui")[0]
-bus = can.interface.Bus(channel='can0', bustype='socketcan_ctypes', bitrate = 1000000)
-myEncoder = RotaryEncoder(eQEP2)
-myEncoder.enable()
-FAN_PIN = 'P8_8'
-GPIO.setup(FAN_PIN, GPIO.OUT)
-FAN2_PIN = 'P8_10'
-GPIO.setup(FAN2_PIN, GPIO.OUT)
-GPIO.output(FAN_PIN, GPIO.LOW)
-GPIO.output(FAN2_PIN, GPIO.LOW)
+form_class = uic.loadUiType("Circuit_test_UI.ui")[0]
+
+bus = can.interfaces.usb2can.Usb2canBus(channel='PCAN_USBBUS1', bitrate = 1000000)
+
+class TCA_Controller:
+    def __init__(self, can_id=0x7f):
+        self._PDO_Tx = 0x03
+        self._PDO_Rx = 0x04
+        self._tx_id = self._PDO_Tx << 7 | can_id
+        self._rx_id = self._PDO_Rx << 7 | can_id
+        self.bus = can.interfaces.usb2can.Usb2canBus(channel='PCAN_USBBUS1', bitrate = 1000000)
+
+        self._rx_message = None
+        self.conf = "None"
+        self.temperature = 0.0
+        self.displacement = 0
+        self.force = 0
+
+    def send(self, conf=None, tca_pwm=0, fan_pwm=0):
+        if tca_pwm > 1023 & tca_pwm < 0:
+            print("pwm_val is out of range(0 <= pwm_val < 1024)")
+            return 0
+        else:
+            tca_pwm_array = tca_pwm.to_bytes(2, 'little')
+            _tca_pwm_low = tca_pwm_array[0]
+            _tca_pwm_high = tca_pwm_array[1]
+
+        if fan_pwm > 1023 & fan_pwm < 0:
+            print("pwm_val is out of range(0 <= pwm_val < 1024)")
+            return 0
+        else:
+            fan_pwm_array = fan_pwm.to_bytes(2, 'little')
+            _fan_pwm_low = fan_pwm_array[0]
+            _fan_pwm_high = fan_pwm_array[1]
+
+        if conf == 1:
+            tx_message = can.Message(arbitration_id=self._tx_id, is_extended_id=False,
+                                     data=[0x50, 0x31, _tca_pwm_low, _tca_pwm_high, _fan_pwm_low, _fan_pwm_high])
+            self.bus.send(tx_message, timeout=0.5)
+
+            self._rx_message = self.bus.recv()
+
+        elif conf == 2:
+            tx_message = can.Message(arbitration_id=self._tx_id, is_extended_id=False,
+                                     data=[0x50, 0x32, _tca_pwm_low, _tca_pwm_high, _fan_pwm_low, _fan_pwm_high])
+            self.bus.send(tx_message, timeout=0.5)
+
+            self._rx_message = self.bus.recv()
+
+    def recv(self):
+        self._conv(self._rx_message)
+        return self._rx_message
+
+    def _conv(self, message):
+        if message.data[1] == 0x31:
+            self.conf = "P1"
+        elif message.data[1] == 0x32:
+            self.conf = "P2"
+        _temperature = message.data[2] + (message.data[3] << 8)
+        self.temperature = _temperature * 0.02 - 273.15
+        self.displacement = message.data[4] + (message.data[5] << 8)
+        self.force = message.data[6] + (message.data[7] << 8)
 
 class Worker(QRunnable):
     '''
@@ -47,300 +97,115 @@ class Worker(QRunnable):
         self.fn(*self.args, **self.kwargs)
 
 class MyWindow(QMainWindow, form_class):
-    BHT = 0
-    PWM = 50
-    P_gain = 10
-    msg = can.Message(arbitration_id=0x27F, data=[0x50, 0x57, 0x4D, 0x31, 0x00, 0x00], extended_id=False)
+    PWM_1 = 0
+    PWM_2 = 0
+    Fan_1 = 0
+    Fan_2 = 0
+    msg = can.Message(arbitration_id=0x1FF, data=[0x50, 0x57, 0x4D, 0x31, 0x00, 0x00], extended_id=False)
     bus.send(msg)
+
     def __init__(self, *args, **kwargs):
         super(MyWindow, self).__init__(*args, **kwargs)
         self.setupUi(self)
-        global PWM
-        global P_gain
+        global PWM_1
+        global PWM_2
+        global Fan_1
+        global Fan_2
         global msg
-        BT=24
-        PWM = self.PWM
-        P_gain = self.P_gain
+        PWM_1 = self.PWM_1
+        PWM_2 = self.PWM_2
+        Fan_1 = self.Fan_1
+        Fan_2 = self.Fan_2
         msg =self.msg
-        self.BicepTemp_S.clicked.connect(self.BicepTemp_S_clicked)
-        self.TricepTemp_S.clicked.connect(self.TricepTemp_S_clicked)
-        self.BicepH.clicked.connect(self.BicepH_clicked)
-        self.BicepC.clicked.connect(self.BicepC_clicked)
-        self.BicepHC.clicked.connect(self.BicepHC_clicked)
-        self.TricepH.clicked.connect(self.TricepH_clicked)
-        self.TricepC.clicked.connect(self.TricepC_clicked)
-        self.TricepHC.clicked.connect(self.TricepHC_clicked)
-        self.PWMsetbtn.clicked.connect(self.PWMset_clicked)
-        self.Psetbtn.clicked.connect(self.Pset_clicked)
-        self.BTH.clicked.connect(self.BTH_clicked)
-        self.TTH.clicked.connect(self.TTH_clicked)
-        self.AngZ.clicked.connect(self.AngZ_clicked)
-        self.AngH.clicked.connect(self.AngH_clicked)
-        self.PWMlcd.display(PWM)
+        self.PWM_B.clicked.connect(self.PWM_B_clicked)
+        self.PWM_T.clicked.connect(self.PWM_T_clicked)
+        self.Fan_B.clicked.connect(self.Fan_B_clicked)
+        self.Fan_T.clicked.connect(self.Fan_T_clicked)
+        self.Start.clicked.connect(self.Start_clicked)
+        self.Stop.clicked.connect(self.Stop_clicked)
+        self.PWM.display(PWM)
         self.Plcd.display(P_gain)
         self.Stop.clicked.connect(self.Stop_clicked)
         self.threadpool = QThreadPool()
         print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
 
-    def BicepTemp_S_clicked(self):
-        msg = can.Message(arbitration_id=0x27F, data=[0x50, 0x57, 0x4D, 0x31, 0x00, 0x00], extended_id=False)
-        bus.send(msg)
-        message = bus.recv(1.0)
-        Temp = message.data[2] + message.data[3] * 256
-        BT = Temp // 50 - 273
-        self.BicepTemp.display(BT)
-        time.sleep(0.1)
 
-    def TricepTemp_S_clicked(self):
-        msg = can.Message(arbitration_id=0x27F, data=[0x50, 0x57, 0x4D, 0x32, 0x00, 0x00], extended_id=False)
-        bus.send(msg)
-        message = bus.recv(1.0)
-        Temp = message.data[2] + message.data[3] * 256
-        TT = Temp // 50 - 273
-        self.TricepTemp.display(TT)
-        time.sleep(0.1)
 
-    def BicepH_clicked(self):
+    # ---------------PWM_B_setting---------------------
+    def PWM_B_clicked(self):
         print("Start to check Bicep temperature")
-        worker = Worker(self.B_time_heating)
+        worker = Worker(self.PWMB_set)
+        self.threadpool.start(worker)
+
+    def PWMB_set(self):
+        global PWM_1
+        PWM_1 = self.PWM_B.value()
+
+    # ---------------PWM_T_setting---------------------
+    def PWM_T_clicked(self):
+        print("Start to check Bicep temperature")
+        worker = Worker(self.PWMT_set)
+        self.threadpool.start(worker)
+
+    def PWMT_set(self):
+        global PWM_2
+        PWM_2 = self.PWM_T.value()
+
+    # ---------------Fan_B_setting---------------------
+    def Fan_B_clicked(self):
+        print("Start to check Bicep temperature")
+        worker = Worker(self.FanB_set)
+        self.threadpool.start(worker)
+
+    def FanB_set(self):
+        global Fan_1
+        Fan_1 = self.Fan_B.value()
+
+    # ---------------Fan_T_setting---------------------
+    def Fan_T_clicked(self):
+        print("Start to check Bicep temperature")
+        worker = Worker(self.FanT_set)
+        self.threadpool.start(worker)
+
+    def FanT_set(self):
+        global Fan_2
+        Fan_2 = self.Fan_T.value()
+
+
+
+    def Start_clicked(self):
+        print("Start to check Bicep temperature")
+        worker = Worker(self.Loop)
         self.threadpool.start(worker)
         print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
 
-    def TricepH_clicked(self):
-        print("Start to check Bicep temperature")
-        worker = Worker(self.T_time_heating)
-        self.threadpool.start(worker)
-        print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
-
-    def B_time_heating(self):
-        global PWM
-        global BT
-        BHT = self.BHtime.value()
-        for i in range(1, BHT):
-            GPIO.output(FAN_PIN, GPIO.LOW)
-            PWM2 = PWM * 1023 // 100
-            PWMH = PWM2 // 256
-            PWML = PWM2 - PWMH * 256
-            msg = can.Message(arbitration_id=0x27F, data=[0x50, 0x57, 0x4D, 0x31, PWML, PWMH], extended_id=False)
-            bus.send(msg)
-            message = bus.recv(1.0)
-            Temp = message.data[2] + message.data[3] * 256
-            BT = Temp // 50 - 273
-            print(i * 0.1, BT)
-            self.BicepTemp.display(BT)
-            time.sleep(0.1)
-        msg = can.Message(arbitration_id=0x27F, data=[0x50, 0x57, 0x4D, 0x31, 0x00, 0x00], extended_id=False)
-        bus.send(msg)
-        GPIO.output(FAN_PIN, GPIO.HIGH)
-
-    def BicepC_clicked(self):
-        BCT = self.BCtime.value()
-        for i in range(1,BCT):
-            GPIO.output(FAN_PIN, GPIO.HIGH)
-            time.sleep(0.1)
-        GPIO.output(FAN_PIN, GPIO.LOW)
-
-    def BicepHC_clicked(self):
-        self.BicepH_clicked()
-        self.BicepC_clicked()
-
-    def T_time_heating(self):
-        global PWM
-        global BT
-        THT = self.THtime.value()
-        for i in range(1, THT):
-            GPIO.output(FAN2_PIN, GPIO.LOW)
-            PWM2 = PWM * 1023 // 100
-            PWMH = PWM2 // 256
-            PWML = PWM2 - PWMH * 256
-            msg = can.Message(arbitration_id=0x27F, data=[0x50, 0x57, 0x4D, 0x32, PWML, PWMH], extended_id=False)
-            bus.send(msg)
-            message = bus.recv(1.0)
-            Temp = message.data[2] + message.data[3] * 256
-            TT = Temp // 50 - 273
-            print(i * 0.1, TT)
-            self.TricepTemp.display(TT)
-            time.sleep(0.1)
-        msg = can.Message(arbitration_id=0x27F, data=[0x50, 0x57, 0x4D, 0x32, 0x00, 0x00], extended_id=False)
-        bus.send(msg)
-        GPIO.output(FAN2_PIN, GPIO.HIGH)
-
-    def TricepC_clicked(self):
-        TCT = self.TCtime.value()
-        for i in range(1,TCT):
-            GPIO.output(FAN2_PIN, GPIO.HIGH)
-            time.sleep(0.1)
-        GPIO.output(FAN2_PIN, GPIO.LOW)
-
-    def TricepHC_clicked(self):
-        self.TricepH_clicked()
-        self.TricepC_clicked()
-
-    def PWMset_clicked(self):
-        global PWM
-        PWM = self.PWMset.value()
-        self.PWMlcd.display(PWM)
-        print(PWM)
-
-    def Pset_clicked(self):
-        global P_gain
-        P_gain = self.Pset.value()
-        self.Plcd.display(P_gain)
-        print(P_gain)
-
-    def BTH_clicked(self):
-        print("Start to check Bicep temperature")
-        worker = Worker(self.BTControl)
-        self.threadpool.start(worker)
-        print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
-
-    def BTControl(self):
-        global PWM
-        global Stop_push
-        Stop_push = True
-        Stop_push = False
-        DBT = self.DesBT.value()
-        BT = 0
-        while BT<80:
-            PWM2 = PWM*1023//100
-            PWMH = PWM2//256
-            PWML = PWM2 - PWMH*256
-            msg = can.Message(arbitration_id=0x27F, data=[0x50, 0x57, 0x4D, 0x31, PWML, PWMH], extended_id=False)
-            bus.send(msg)
-            message = bus.recv(1.0)
-            Temp = message.data[2] + message.data[3] * 256
-            BT = Temp // 50 - 273
-            self.BicepTemp.display(BT)
-            time.sleep(0.1)
-            if BT > DBT:
-                break
-            if Stop_push == True:
-                break
-        msg = can.Message(arbitration_id=0x27F, data=[0x50, 0x57, 0x4D, 0x31, 0x00, 0x00], extended_id=False)
-        bus.send(msg)
-        GPIO.output(FAN_PIN, GPIO.HIGH)
-
-    def TTH_clicked(self):
-        print("Start to check Bicep temperature")
-        worker = Worker(self.TTControl)
-        self.threadpool.start(worker)
-        print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
-
-    def TTControl(self):
-        global PWM
-        global Stop_push
-        Stop_push = True
-        Stop_push = False
-        DTT = self.DesTT.value()
-        TT = 0
-        while TT < 80:
-            PWM2 = PWM*1023//100
-            PWMH = PWM2//256
-            PWML = PWM2 - PWMH*256
-            msg = can.Message(arbitration_id=0x27F, data=[0x50, 0x57, 0x4D, 0x32, PWML, PWMH], extended_id=False)
-            bus.send(msg)
-            message = bus.recv(1.0)
-            Temp = message.data[2] + message.data[3] * 256
-            TT = Temp // 50 - 273
-            self.TricepTemp.display(TT)
-            time.sleep(0.1)
-            if TT > DTT:
-                break
-            if Stop_push == True:
-                break
-        msg = can.Message(arbitration_id=0x27F, data=[0x50, 0x57, 0x4D, 0x32, 0x00, 0x00], extended_id=False)
-        bus.send(msg)
-        GPIO.output(FAN2_PIN, GPIO.HIGH)
-
-    def AngZ_clicked(self):
-        myEncoder.zero()
-        Angle = -myEncoder.position*360//8192
-        self.Alcd.display(Angle)
-
-    def AngH_clicked(self):
-        print("Start to check Bicep temperature")
-        worker = Worker(self.AngControl)
-        self.threadpool.start(worker)
-        print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
-
-    def AngControl(self):
-        global PWM
+    def Loop(self):
+        global PWM_1
+        global PWM_2
         global P_gain
         global Stop_push
-        OA = self.DesA.value()
-        Stop_push = True
         Stop_push = False
-
-        msg = can.Message(arbitration_id=0x27F, data=[0x50, 0x57, 0x4D, 0x31, PWML, PWMH], extended_id=False)
-        bus.send(msg)
-        message = bus.recv(1.0)
-        Temp = message.data[2] + message.data[3] * 256
-        BT = Temp // 50 - 273
-        msg = can.Message(arbitration_id=0x27F, data=[0x50, 0x57, 0x4D, 0x32, PWML, PWMH], extended_id=False)
-        bus.send(msg)
-        message = bus.recv(1.0)
-        TTemp = message.data[2] + message.data[3] * 256
-        TT = TTemp // 50 - 273
-
+        can_bus = TCA_Controller(0x7f)
         while Stop_push != True:
-            Angle = -myEncoder.position * 360 // 8192
-            DA = OA - Angle
-            if DA > 0:
-                GPIO.output(FAN2_PIN, GPIO.HIGH)
-                GPIO.output(FAN_PIN, GPIO.LOW)
-                PWM = int(DA * P_gain)
-                PWM2 = PWM * 1023 // 100
-                PWMH = PWM2 // 256
-                PWML = PWM2 - PWMH * 256
-                msg = can.Message(arbitration_id=0x27F, data=[0x50, 0x57, 0x4D, 0x31, PWML, PWMH], extended_id=False)
-                bus.send(msg)
-                message = bus.recv(1.0)
-                Temp = message.data[2] + message.data[3] * 256
-                BT = Temp // 50 - 273
-            else:
-                GPIO.output(FAN_PIN, GPIO.HIGH)
-                GPIO.output(FAN2_PIN, GPIO.LOW)
-                PWM = int(-DA * P_gain)
-                PWM2 = PWM * 1023 // 100
-                PWMH = PWM2 // 256
-                PWML = PWM2 - PWMH * 256
-                msg = can.Message(arbitration_id=0x27F, data=[0x50, 0x57, 0x4D, 0x32, PWML, PWMH], extended_id=False)
-                bus.send(msg)
-                message = bus.recv(1.0)
-                TTemp = message.data[2] + message.data[3] * 256
-                TT = TTemp // 50 - 273
+            can_bus.send(1, 1023, 0)
+            can_bus.recv()
+            print("conf : " + can_bus.conf)
+            print("temp : %f" % can_bus.tmeperature)
+            print("disp : %d" % can_bus.displacement)
+            print("forc : %d" % can_bus.force)
 
-            self.BicepTemp.display(BT)
-            self.TricepTemp.display(TT)
-            self.PWMlcd.display(PWM)
-            self.Alcd.display(Angle)
+            can_bus.send(2, 0, 1023)
+            can_bus.recv()
+            print("conf : " + can_bus.conf)
+            print("temp : %f" % can_bus.tmeperature)
+            print("disp : %d" % can_bus.displacement)
+            print("forc : %d" % can_bus.force)
+            time.sleep(0.5)
             time.sleep(0.05)
-
-            if BT > 65 or TT > 65:
-                PWM = 0
-                break
-        GPIO.output(FAN_PIN, GPIO.HIGH)
-        GPIO.output(FAN2_PIN, GPIO.HIGH)
 
     def Stop_clicked(self):
         global Stop_push
         Stop_push = True
-        GPIO.output(FAN_PIN, GPIO.LOW)
-        GPIO.output(FAN2_PIN, GPIO.LOW)
-        msg = can.Message(arbitration_id=0x27F, data=[0x50, 0x57, 0x4D, 0x31, 0x00, 0x00], extended_id=False)
-        bus.send(msg)
-        message = bus.recv(1.0)
-        Temp = message.data[2] + message.data[3] * 256
-        BT = Temp // 50 - 273
-        self.BicepTemp.display(BT)
-        msg = can.Message(arbitration_id=0x27F, data=[0x50, 0x57, 0x4D, 0x32, 0x00, 0x00], extended_id=False)
-        bus.send(msg)
-        message = bus.recv(1.0)
-        TTemp = message.data[2] + message.data[3] * 256
-        TT = TTemp // 50 - 273
-        self.TricepTemp.display(TT)
-        Angle = -myEncoder.position * 360 // 8192
-        self.Alcd.display(Angle)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
