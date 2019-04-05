@@ -7,7 +7,7 @@ from PyQt5.QtCore import *
 
 form_class = uic.loadUiType("Circuit_test_UI.ui")[0]
 
-bus = can.interfaces.usb2can.Usb2canBus(channel='PCAN_USBBUS1', bitrate = 1000000)
+bus = can.interface.Bus(bustype = 'kvaser', channel=0, bitrate = 1000000)
 
 class TCA_Controller:
     def __init__(self, can_id=0x7f):
@@ -15,7 +15,7 @@ class TCA_Controller:
         self._PDO_Rx = 0x04
         self._tx_id = self._PDO_Tx << 7 | can_id
         self._rx_id = self._PDO_Rx << 7 | can_id
-        self.bus = can.interfaces.usb2can.Usb2canBus(channel='PCAN_USBBUS1', bitrate = 1000000)
+        self.bus = can.interface.Bus(bustype = 'kvaser', channel=0, bitrate = 1000000)
 
         self._rx_message = None
         self.conf = "None"
@@ -101,9 +101,6 @@ class MyWindow(QMainWindow, form_class):
     PWM_2 = 0
     Fan_1 = 0
     Fan_2 = 0
-    msg = can.Message(arbitration_id=0x1FF, data=[0x50, 0x57, 0x4D, 0x31, 0x00, 0x00], extended_id=False)
-    bus.send(msg)
-
     def __init__(self, *args, **kwargs):
         super(MyWindow, self).__init__(*args, **kwargs)
         self.setupUi(self)
@@ -116,11 +113,10 @@ class MyWindow(QMainWindow, form_class):
         PWM_2 = self.PWM_2
         Fan_1 = self.Fan_1
         Fan_2 = self.Fan_2
-        msg =self.msg
-        self.PWM_B.clicked.connect(self.PWM_B_clicked)
-        self.PWM_T.clicked.connect(self.PWM_T_clicked)
-        self.Fan_B.clicked.connect(self.Fan_B_clicked)
-        self.Fan_T.clicked.connect(self.Fan_T_clicked)
+        self.pushButton.clicked.connect(self.PWM_B_clicked)
+        self.pushButton_2.clicked.connect(self.PWM_T_clicked)
+        self.pushButton_3.clicked.connect(self.Fan_B_clicked)
+        self.pushButton_4.clicked.connect(self.Fan_T_clicked)
         self.Start.clicked.connect(self.Start_clicked)
         self.Stop.clicked.connect(self.Stop_clicked)
         #self.PWM.display(PWM)
@@ -131,7 +127,6 @@ class MyWindow(QMainWindow, form_class):
 
     # ---------------PWM_B_setting---------------------
     def PWM_B_clicked(self):
-        print("Start to check Bicep temperature")
         worker = Worker(self.PWMB_set)
         self.threadpool.start(worker)
 
@@ -141,7 +136,6 @@ class MyWindow(QMainWindow, form_class):
 
     # ---------------PWM_T_setting---------------------
     def PWM_T_clicked(self):
-        print("Start to check Bicep temperature")
         worker = Worker(self.PWMT_set)
         self.threadpool.start(worker)
 
@@ -151,7 +145,6 @@ class MyWindow(QMainWindow, form_class):
 
     # ---------------Fan_B_setting---------------------
     def Fan_B_clicked(self):
-        print("Start to check Bicep temperature")
         worker = Worker(self.FanB_set)
         self.threadpool.start(worker)
 
@@ -161,7 +154,6 @@ class MyWindow(QMainWindow, form_class):
 
     # ---------------Fan_T_setting---------------------
     def Fan_T_clicked(self):
-        print("Start to check Bicep temperature")
         worker = Worker(self.FanT_set)
         self.threadpool.start(worker)
 
@@ -172,7 +164,7 @@ class MyWindow(QMainWindow, form_class):
 
 
     def Start_clicked(self):
-        print("Start to check Bicep temperature")
+        print("Start")
         worker = Worker(self.Loop)
         self.threadpool.start(worker)
         print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
