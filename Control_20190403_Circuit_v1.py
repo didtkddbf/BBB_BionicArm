@@ -7,7 +7,7 @@ from PyQt5.QtCore import *
 
 form_class = uic.loadUiType("Circuit_test_UI.ui")[0]
 
-bus = can.interface.Bus(bustype = 'kvaser', channel=0, bitrate = 1000000)
+# bus = can.interface.Bus(bustype = 'kvaser', channel=0, bitrate = 1000000)
 
 class TCA_Controller:
     def __init__(self, can_id=0x7f):
@@ -108,7 +108,6 @@ class MyWindow(QMainWindow, form_class):
         global PWM_2
         global Fan_1
         global Fan_2
-        global msg
         PWM_1 = self.PWM_1
         PWM_2 = self.PWM_2
         Fan_1 = self.Fan_1
@@ -172,24 +171,25 @@ class MyWindow(QMainWindow, form_class):
     def Loop(self):
         global PWM_1
         global PWM_2
-        global P_gain
+        global Fan_1
+        global Fan_2
         global Stop_push
         Stop_push = False
         can_bus = TCA_Controller(0x7f)
+        print(PWM_1,PWM_2,Fan_1,Fan_2)
         while Stop_push != True:
-            can_bus.send(1, 1023, 0)
+            can_bus.send(1, PWM_1, Fan_1)
             can_bus.recv()
             self.Force_1.display(can_bus.force)
             self.Temp_1.display(can_bus.temperature)
-            self.ADC_1.display(can_bus.displacement)
+            self.Encoder_1.display(can_bus.displacement)
 
-            can_bus.send(2, 0, 1023)
+            can_bus.send(2, PWM_2, Fan2)
             can_bus.recv()
             self.Force_2.display(can_bus.force)
             self.Temp_2.display(can_bus.temperature)
-            self.ADC_2.display(can_bus.displacement)
-            time.sleep(0.5)
-            time.sleep(0.05)
+            self.Encoder_1.display(can_bus.displacement)
+            time.sleep(0.2)
 
     def Stop_clicked(self):
         global Stop_push
