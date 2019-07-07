@@ -5,7 +5,7 @@ from PyQt5 import uic
 import can
 from PyQt5.QtCore import *
 
-form_class = uic.loadUiType("Circuit_test_UI.ui")[0]
+form_class = uic.loadUiType("Circuit_test_UI2.ui")[0]
 
 # bus = can.interface.Bus(bustype = 'kvaser', channel=0, bitrate = 1000000)
 
@@ -101,28 +101,27 @@ class MyWindow(QMainWindow, form_class):
     PWM_2 = 0
     Fan_1 = 0
     Fan_2 = 0
+    Time_inval = 10
+    Ki = 10
+    Kd = 0
+    Kp = 20
     def __init__(self, *args, **kwargs):
+        global Ki, Kd, Kp
+        Ki = self.Ki
+        Kd = self.Kd
+        Kp = self.Kp
         super(MyWindow, self).__init__(*args, **kwargs)
         self.setupUi(self)
-        global PWM_1
-        global PWM_2
-        global Fan_1
-        global Fan_2
-        PWM_1 = self.PWM_1
-        PWM_2 = self.PWM_2
-        Fan_1 = self.Fan_1
-        Fan_2 = self.Fan_2
         self.pushButton.clicked.connect(self.PWM_B_clicked)
         self.pushButton_2.clicked.connect(self.PWM_T_clicked)
         self.pushButton_3.clicked.connect(self.Fan_B_clicked)
         self.pushButton_4.clicked.connect(self.Fan_T_clicked)
         self.Start.clicked.connect(self.Start_clicked)
+        self.Cool.clicked.connect(self.Cool_clicked)
         self.Stop.clicked.connect(self.Stop_clicked)
         #self.PWM.display(PWM)
         self.threadpool = QThreadPool()
-        print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
-
-
+        #print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
 
     # ---------------PWM_B_setting---------------------
     def PWM_B_clicked(self):
@@ -130,19 +129,18 @@ class MyWindow(QMainWindow, form_class):
         self.threadpool.start(worker)
 
     def PWMB_set(self):
-        global PWM_1
-        PWM_1 = self.PWM_B.value()
-        print(PWM_1)
+        global Time_inval
+        Time_inval = self.PWM_B.value()
+        print("Time interval = ",Time_inval)
 
-    # ---------------PWM_T_setting---------------------
+    # ---------------Kp_setting---------------------
     def PWM_T_clicked(self):
         worker = Worker(self.PWMT_set)
         self.threadpool.start(worker)
 
     def PWMT_set(self):
-        global PWM_2
-        PWM_2 = self.PWM_T.value()
-        print(PWM_2)
+        global Kp
+        Kp = self.PWM_T.value()
 
     # ---------------Fan_B_setting---------------------
     def Fan_B_clicked(self):
@@ -150,9 +148,8 @@ class MyWindow(QMainWindow, form_class):
         self.threadpool.start(worker)
 
     def FanB_set(self):
-        global Fan_1
-        Fan_1 = self.Ban.value()
-        print(Fan_1)
+        global Ki
+        Ki = self.Ban.value()
 
     # ---------------Fan_T_setting---------------------
     def Fan_T_clicked(self):
@@ -160,40 +157,151 @@ class MyWindow(QMainWindow, form_class):
         self.threadpool.start(worker)
 
     def FanT_set(self):
-        global Fan_2
-        Fan_2 = self.Tan.value()
-        print(Fan_2)
+        global Kd
+        Kd = self.Tan.value()
 
-
-
-    def Start_clicked(self):
-        print("Start")
-        worker = Worker(self.Loop)
+    def Cool_clicked(self):
+        worker = Worker(self.Cooling)
         self.threadpool.start(worker)
-        print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
 
-    def Loop(self):
-        global PWM_1
-        global PWM_2
-        global Fan_1
-        global Fan_2
+    def Cooling(self):
+
         global Stop_push
         Stop_push = False
         can_bus = TCA_Controller(0x7f)
         while Stop_push != True:
+            can_bus.send(1, 0, 1000)
+            can_bus.recv()
+            Temp_b = can_bus.temperature
+            Force_b = can_bus.force
+            self.Force_1.display(Force_b)
+            self.Temp_1.display(Temp_b)
+            self.Encoder_1.display(can_bus.displacement)
+            can_bus.send(2, 0, 1000)
+            can_bus.recv()
+            Temp_t = can_bus.temperature
+            Force_t = can_bus.force
+            self.Force_2.display(Force_t)
+            self.Temp_2.display(Temp_t)
+
+
+
+    def Start_clicked(self):
+        print("count cur_Ang obj_Ang PWM_b PWM_t Temp_b Temp_t Force_b Force_t")
+        worker = Worker(self.Loop)
+        self.threadpool.start(worker)
+        #print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
+
+    def Loop(self):
+
+        global Time_inval
+        global Kp
+        global Ki
+        global Kd
+        global Stop_push
+        Stop_push = False
+        #-------------Varaibles Initialization-----------
+        PWM_1 = 0
+        PWM_2 = 0
+        Fan_1 = 0
+        Fan_2 = 0
+        Temp_b = 0
+        Temp_t = 0
+        Force_b = 0
+        Force_t = 0
+
+        #----------------Control setting-------------------
+        #-----PID value------------
+        Kp = self.Kp
+        Ki = self.Ki
+        Kd = self.Kd
+        Time_inval = self.Time_inval
+
+        #-----Angle value-----------
+        cur_Ang = 0
+        obj_Ang = 0
+        C2A=23
+        error = 0
+        error_prev = 0
+
+        #-----------CAN Initializtion---------------------
+        can_bus = TCA_Controller(0x7f)
+        can_bus.send(1, 0, 0)
+        can_bus.recv()
+        can_bus.send(2, 0, 0)
+        can_bus.recv()
+        org_Ang = can_bus.displacement
+
+        #--------Time Initializtion---------------------
+        dt = 0
+        dt_sleep = 0.1
+        Tolerance = 10
+        count = 0.0
+        start_time = time.time()
+        time_prev = 0
+
+
+        while Stop_push != True:
+            cur_Ang = can_bus.displacement
+        #-----------Object Angle-----------------
+            if count<3:                         # Start point
+                obj_Ang = int(org_Ang)
+
+            elif count >= 3 and count < Time_inval+3:      # 0 to -10deg
+                obj_Ang = int(org_Ang + 10*C2A)
+
+            else :
+                obj_Ang = cur_Ang
+
+        #----------Error Calculation-----------
+            error = int(obj_Ang - cur_Ang)
+            de = error - error_prev
+            dt = time.time() - time_prev
+            control = Kp*error + Kd*de/dt + Ki*error*dt
+
+            if abs(error) <= Tolerance:
+                PWM_1 = 0
+                PWM_2 = 0
+                Fan_1 = 0
+                Fan_2 = 0
+
+            elif error > Tolerance:
+                PWM_1 = int(abs(control))
+                Fan_1 = 0
+                Fan_2 = 1023
+                if PWM_1 > 1023:
+                    PWM_1 = 1023
+
+            else:
+                PWM_2 = int(abs(control))
+                Fan_1 = 1023
+                Fan_2 = 0
+                if PWM_2 > 1023:
+                    PWM_2 = 1023
+
             can_bus.send(1, PWM_1, Fan_1)
             can_bus.recv()
+            Temp_b = can_bus.temperature
+            Force_b = can_bus.force
+            self.ADC_1.display(PWM_1)
             self.Force_1.display(can_bus.force)
             self.Temp_1.display(can_bus.temperature)
-
             self.Encoder_1.display(can_bus.displacement)
 
             can_bus.send(2, PWM_2, Fan_2)
             can_bus.recv()
+            Temp_t = can_bus.temperature
+            Force_t = can_bus.force
             self.Force_2.display(can_bus.force)
+            self.ADC_2.display(PWM_2)
             self.Temp_2.display(can_bus.temperature)
-            self.Encoder_1.display(can_bus.displacement)
-            time.sleep(0.2)
+
+            print('{0} {1} {2} {3} {4} {5} {6} {7} {8}'.format((time.time()-start_time),cur_Ang/23,obj_Ang/23,PWM_1,PWM_2,Temp_b,Temp_t,Force_b,Force_t))
+            #------------Previous DATA---------------
+            error_prev = error
+            time_prev = time.time()
+            count = count + 0.1
+            time.sleep(dt_sleep)
 
     def Stop_clicked(self):
         global Stop_push
@@ -204,4 +312,3 @@ if __name__ == "__main__":
     myWindow = MyWindow()
     myWindow.show()
     app.exec_()
-

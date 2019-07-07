@@ -120,7 +120,7 @@ class MyWindow(QMainWindow, form_class):
         self.Stop.clicked.connect(self.Stop_clicked)
         #self.PWM.display(PWM)
         self.threadpool = QThreadPool()
-        print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
+        #print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
 
 
 
@@ -170,7 +170,7 @@ class MyWindow(QMainWindow, form_class):
         print("Start")
         worker = Worker(self.Loop)
         self.threadpool.start(worker)
-        print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
+        #print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
 
     def Loop(self):
         global PWM_1
@@ -180,20 +180,101 @@ class MyWindow(QMainWindow, form_class):
         global Stop_push
         Stop_push = False
         can_bus = TCA_Controller(0x7f)
+        can_bus.send(1, 0, 0)
+        can_bus.recv()
+        can_bus.send(2, 0, 0)
+        can_bus.recv()
+        i = 0
+        cur_Ang = 0
+        cur_Ang = can_bus.displacement
+        org_Ang = cur_Ang
+        obj_Ang = 0
+        C2A=23
+        count = 0.0
+        error = 0
+        P_gain = 10
+        PWM_1 = 0
+        PWM_2 = 0
+        Fan_2 = 1023
+        Fan_1 = 1023
+        Temp_b = 0
+        Temp_t = 0
+        Force_b = 0
+        Force_t = 0
         while Stop_push != True:
+            cur_Ang = can_bus.displacement
+
+            if count<3:                         # Start point
+                obj_Ang = int(org_Ang)
+                error = int(obj_Ang - cur_Ang)
+
+            elif count >= 3 and count < 8:      # 0 to -10deg
+                t = count - 3.0
+                obj_Ang = int(org_Ang - 2 * t * C2A)
+                error = int(obj_Ang - cur_Ang)
+
+            elif count >= 8 and count < 13:     # -10deg cont
+                obj_Ang = int(org_Ang - 10*C2A)
+                error = obj_Ang - cur_Ang
+
+            elif count >= 13 and count < 18:    # -10deg to -5deg
+                t = count - 13
+                obj_Ang = int(org_Ang - 10*C2A + 1*t*C2A)
+                error = obj_Ang - cur_Ang
+
+            elif count >= 18 and count < 23:    # -5deg cont
+                obj_Ang = int(org_Ang - 5*C2A)
+                error = obj_Ang - cur_Ang
+
+            elif count >= 23 and count < 28:    # -5deg to 5
+                t = count - 23
+                obj_Ang = int(org_Ang - 5*C2A + 2*t*C2A)
+                error = obj_Ang - cur_Ang
+
+            elif count >= 28 and count < 40:  # 5deg cont
+                obj_Ang = int(org_Ang + 5 * C2A)
+                error = obj_Ang - cur_Ang
+
+            else :
+                PWM_1=0
+                PWM_2=0
+                Fan_1=1023
+                Fan_2=1023
+
+
+            if error > 0:
+                PWM_1 = error * P_gain
+                Fan_1 = 0
+                Fan_2 = 1023
+                if PWM_1 > 1023:
+                    PWM_1 = 1023
+            else:
+                PWM_2 = - error * P_gain
+                Fan_1 = 1023
+                Fan_2 = 0
+                if PWM_2 > 1023:
+                    PWM_2 = 1023
+
+            count = count + 0.1
+
             can_bus.send(1, PWM_1, Fan_1)
             can_bus.recv()
+            Temp_b = can_bus.temperature
+            Force_b = can_bus.force
             self.Force_1.display(can_bus.force)
             self.Temp_1.display(can_bus.temperature)
-
             self.Encoder_1.display(can_bus.displacement)
 
             can_bus.send(2, PWM_2, Fan_2)
             can_bus.recv()
+            Temp_t = can_bus.temperature
+            Force_t = can_bus.force
             self.Force_2.display(can_bus.force)
             self.Temp_2.display(can_bus.temperature)
-            self.Encoder_1.display(can_bus.displacement)
-            time.sleep(0.2)
+
+            print('{0} {1} {2} {3} {4} {5} {6} {7} {8}'.format(count,cur_Ang,obj_Ang,PWM_1,PWM_2,Temp_b,Temp_t,Force_b,Force_t))
+
+            time.sleep(0.1)
 
     def Stop_clicked(self):
         global Stop_push
@@ -204,4 +285,3 @@ if __name__ == "__main__":
     myWindow = MyWindow()
     myWindow.show()
     app.exec_()
-
