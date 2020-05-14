@@ -10,7 +10,7 @@ form_class = uic.loadUiType("Shoulder_UI.ui")[0]
 
 #----------Arduino Serial setting---------------
 AD = serial.Serial(
-    port='COM3',
+    port='COM15',
     baudrate=9600,
     parity=serial.PARITY_NONE,
     stopbits=serial.STOPBITS_ONE,
@@ -65,6 +65,8 @@ class MyWindow(QMainWindow, form_class):
 
     # ---------------PWM_B_setting---------------------
     def SerialSend(self):
+        if AD.readable():
+            serialData = AD.readline()
         Xaxis = str(self.XaxisValue.value())
         Yaxis = str(self.YaxisValue.value())
         Zaxis  = str(self.ZaxisValue.value())
@@ -75,10 +77,14 @@ class MyWindow(QMainWindow, form_class):
         Datalist = []
         print("Sended DATA")
         time.sleep(2)
+
         if AD.readable():
             serialData = AD.readline()
             print(serialData)
             serialString = serialData.decode()
+            print(serialString)
+
+        if len(serialString)>3:
             serialList = serialString.split()
             Datalist = list(map(float, serialList))
 
@@ -86,9 +92,10 @@ class MyWindow(QMainWindow, form_class):
             self.CommentLCD.append('Shoulder move')
         else:
             self.CommentLCD.append('Failed')
-        self.XaxisLCD.display(Datalist[1])
-        self.YaxisLCD.display(Datalist[2])
-        self.ZaxisLCD.display(Datalist[3])
+        if(len(Datalist)>3):
+            self.XaxisLCD.display(Datalist[1])
+            self.YaxisLCD.display(Datalist[2])
+            self.ZaxisLCD.display(Datalist[3])
 
     def ShoulderZero(self):
         AD.write(b'z')
@@ -103,7 +110,3 @@ if __name__ == "__main__":
     myWindow = MyWindow()
     myWindow.show()
     app.exec_()
-
-
-
-tdata.close()

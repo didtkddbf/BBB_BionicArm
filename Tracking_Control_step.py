@@ -102,9 +102,9 @@ class MyWindow(QMainWindow, form_class):
     Fan_1 = 0
     Fan_2 = 0
     Time_inval = 10
-    Ki = 10
-    Kd = 0
-    Kp = 20
+    Ki = 50
+    Kd = 6
+    Kp = 5
     def __init__(self, *args, **kwargs):
         global Ki, Kd, Kp
         Ki = self.Ki
@@ -187,7 +187,7 @@ class MyWindow(QMainWindow, form_class):
 
 
     def Start_clicked(self):
-        print("count cur_Ang obj_Ang PWM_b PWM_t Temp_b Temp_t Force_b Force_t")
+        print("count cur_Ang Ki PWM_b PWM_t Temp_b Temp_t Force_b Force_t")
         worker = Worker(self.Loop)
         self.threadpool.start(worker)
         #print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
@@ -235,7 +235,7 @@ class MyWindow(QMainWindow, form_class):
         #--------Time Initializtion---------------------
         dt = 0
         dt_sleep = 0.1
-        Tolerance = 10
+        Tolerance = 1
         count = 0.0
         start_time = time.time()
         time_prev = 0
@@ -247,8 +247,8 @@ class MyWindow(QMainWindow, form_class):
             if count<3:                         # Start point
                 obj_Ang = int(org_Ang)
 
-            elif count >= 3 and count < Time_inval+3:      # 0 to -10deg
-                obj_Ang = int(org_Ang + 10*C2A)
+            elif count >= 3 and count < Time_inval+3:      # 0 to 45deg
+                obj_Ang = int(org_Ang + 45*C2A)
 
             else :
                 obj_Ang = cur_Ang
@@ -258,32 +258,41 @@ class MyWindow(QMainWindow, form_class):
             de = error - error_prev
             dt = time.time() - time_prev
             control = Kp*error + Kd*de/dt + Ki*error*dt
+            RealAngle = int((cur_Ang - org_Ang)/23)
 
             if abs(error) <= Tolerance:
-                PWM_1 = 0
+                PWM_1 = 0 + RealAngle*3
                 PWM_2 = 0
-                Fan_1 = 0
+                Fan_1 = 300
                 Fan_2 = 0
 
             elif error > Tolerance:
-                PWM_1 = int(abs(control))
-                Fan_1 = 0
+                PWM_1 = int(abs(control)) + RealAngle*3
+                PWM_2 = 0
+                Fan_1 = 300
                 Fan_2 = 1023
-                if PWM_1 > 1023:
-                    PWM_1 = 1023
+                if PWM_1 > 500:
+                    PWM_1 = 500
 
             else:
-                PWM_2 = int(abs(control))
-                Fan_1 = 1023
+                PWM_1 = 0 + RealAngle*3
+                PWM_2 = 0
+                Fan_1 = 300
                 Fan_2 = 0
                 if PWM_2 > 1023:
                     PWM_2 = 1023
+
+            if count > Time_inval+3:
+                Fan_1 = 1023
+                PWM_2 = 100
+                Fan_2 = 1023
+
 
             can_bus.send(1, PWM_1, Fan_1)
             can_bus.recv()
             Temp_b = can_bus.temperature
             Force_b = can_bus.force
-            self.ADC_1.display(PWM_1)
+            self.ADC_1.display(Fan_1)
             self.Force_1.display(can_bus.force)
             self.Temp_1.display(can_bus.temperature)
             self.Encoder_1.display(can_bus.displacement)
@@ -296,7 +305,7 @@ class MyWindow(QMainWindow, form_class):
             self.ADC_2.display(PWM_2)
             self.Temp_2.display(can_bus.temperature)
 
-            print('{0} {1} {2} {3} {4} {5} {6} {7} {8}'.format((time.time()-start_time),cur_Ang/23,obj_Ang/23,PWM_1,PWM_2,Temp_b,Temp_t,Force_b,Force_t))
+            print('{0} {1} {2} {3} {4} {5} {6} {7}'.format((time.time()-start_time),RealAngle,Ki,PWM_1,PWM_2,Temp_b,Temp_t,Force_b,Force_t))
             #------------Previous DATA---------------
             error_prev = error
             time_prev = time.time()

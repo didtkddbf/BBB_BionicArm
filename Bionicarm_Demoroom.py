@@ -94,7 +94,7 @@ class Worker(QRunnable):
         '''
         Initialise the runner function with passed args, kwargs.
         '''
-        self.fn(*self.args, **self.kwargs
+        self.fn(*self.args, **self.kwargs)
 
 class MyWindow(QMainWindow, form_class):
     PWM_1 = 0
@@ -102,10 +102,14 @@ class MyWindow(QMainWindow, form_class):
     Fan_1 = 0
     Fan_2 = 0
     Time_inval = 10
-    Ki = 10
-    Kd = 0
-    Kp = 20
+    Ki = 100
+    Kd = 6
+    Kp = 5
     def __init__(self, *args, **kwargs):
+        global Ki, Kd, Kp
+        Ki = self.Ki
+        Kd = self.Kd
+        Kp = self.Kp
         super(MyWindow, self).__init__(*args, **kwargs)
         self.setupUi(self)
         self.pushButton.clicked.connect(self.PWM_B_clicked)
@@ -127,6 +131,8 @@ class MyWindow(QMainWindow, form_class):
     def PWMB_set(self):
         global Time_inval
         Time_inval = self.PWM_B.value()
+        print("Time interval = ",Time_inval)
+
     # ---------------Kp_setting---------------------
     def PWM_T_clicked(self):
         worker = Worker(self.PWMT_set)
@@ -181,7 +187,7 @@ class MyWindow(QMainWindow, form_class):
 
 
     def Start_clicked(self):
-        print("count cur_Ang obj_Ang PWM_b PWM_t Temp_b Temp_t Force_b Force_t")
+        print("Time(s) Cur_Ang Obj_Ang PWM_b PWM_t Temp_b Temp_t Force_b Force_t")
         worker = Worker(self.Loop)
         self.threadpool.start(worker)
         #print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
@@ -206,10 +212,12 @@ class MyWindow(QMainWindow, form_class):
 
         #----------------Control setting-------------------
         #-----PID value------------
-        Kp = self.PWM_T.value()
-        Ki = self.Ban.value()
-        Kd = self.Tan.value()
-        Time_inval = self.PWM_B.value()
+        Kp = self.Kp
+        Ki = self.Ki
+        Kd = self.Kd
+        Time_inval = self.Time_inval
+        Kpp = 5
+        Kii = 10
 
         #-----Angle value-----------
         cur_Ang = 0
@@ -219,109 +227,128 @@ class MyWindow(QMainWindow, form_class):
         error_prev = 0
 
         #-----------CAN Initializtion---------------------
-        # can_bus = TCA_Controller(0x7f)
-        # can_bus.send(1, 0, 0)
-        # can_bus.recv()
-        # can_bus.send(2, 0, 0)
-        # can_bus.recv()
-        # org_Ang = can_bus.displacement
+        can_bus = TCA_Controller(0x7f)
+        can_bus.send(1, 0, 0)
+        can_bus.recv()
+        can_bus.send(2, 0, 0)
+        can_bus.recv()
+        org_Ang = can_bus.displacement
 
         #--------Time Initializtion---------------------
         dt = 0
         dt_sleep = 0.1
-        Tolerance = 10
+        Tolerance = 0.1
         count = 0.0
         start_time = time.time()
         time_prev = 0
 
 
         while Stop_push != True:
-            # cur_Ang = can_bus.displacement
+            cur_Ang = can_bus.displacement
         #-----------Object Angle-----------------
-        #     if count<3:                         # Start point
-        #         obj_Ang = int(org_Ang)
-        #
-        #     elif count >= 3 and count < 8:      # 0 to -10deg
-        #         t = count - 3.0
-        #         a = org_Ang
-        #         b = org_Ang - 10 * C2A
-        #         term = 5
-        #         obj_Ang = int(2*(a-b)*t*t*t/(term*term*term)-3*(a-b)*t*t/(term*term) + a)
-        #
-        #     elif count >= 8 and count < 13:     # -10deg cont
-        #         obj_Ang = int(org_Ang - 10*C2A)
-        #
-        #     elif count >= 13 and count < 18:    # -10deg to -5deg
-        #         t = count - 13
-        #         a = org_Ang - 10 * C2A
-        #         b = org_Ang - 5 * C2A
-        #         term = 5
-        #         obj_Ang = int(2*(a-b)*t*t*t/(term*term*term)-3*(a-b)*t*t/(term*term) + a)
-        #
-        #     elif count >= 18 and count < 23:    # -5deg cont
-        #         obj_Ang = int(org_Ang - 5*C2A)
-        #
-        #     elif count >= 23 and count < 28:    # -5deg to 5
-        #         t = count - 23
-        #         a = org_Ang - 5 * C2A
-        #         b = org_Ang + 5 * C2A
-        #         term = 5
-        #         obj_Ang = int(2*(a-b)*t*t*t/(term*term*term)-3*(a-b)*t*t/(term*term) + a)
-        #
-        #     elif count >= 28 and count < 40:  # 5deg cont
-        #         obj_Ang = int(org_Ang + 5 * C2A)
-        #
-        #     else :
-        #         obj_Ang = cur_Ang
-        #
-        # #----------Error Calculation-----------
-        #     error = int(obj_Ang - cur_Ang)
-        #     de = error - error_prev
-        #     dt = time.time() - time_prev
-        #     control = Kp*error + Kd*de/dt + Ki*error*dt
-        #
-        #     if abs(error) <= Tolerance:
-        #         PWM_1 = 0
-        #         PWM_2 = 0
-        #         Fan_1 = 0
-        #         Fan_2 = 0
-        #
-        #     elif error > Tolerance:
-        #         PWM_1 = 1023
-        #         Fan_1 = 0
-        #         Fan_2 = 1023
-        #         if PWM_1 > 1023:
-        #             PWM_1 = 1023
-        #
-        #     else:
-        #         PWM_2 = 1023
-        #         Fan_1 = 1023
-        #         Fan_2 = 0
-        #         if PWM_2 > 1023:
-        #             PWM_2 = 1023
+            # if count<3:                         # Start point
+            #     obj_Ang = org_Ang
+            #
+            # elif count >= 3 and count < Time_inval+3:      # 0 to 45deg
+            #     obj_Ang = org_Ang + 45*C2A
+            #
+            # else :
+            #     obj_Ang = org_Ang
 
-            # can_bus.send(1, PWM_1, Fan_1)
-            # can_bus.recv()
-            # Temp_b = can_bus.temperature
-            # Force_b = can_bus.force
-            # self.ADC_1.display(PWM_1)
-            # self.Force_1.display(can_bus.force)
-            # self.Temp_1.display(can_bus.temperature)
-            # self.Encoder_1.display(can_bus.displacement)
-            #
-            # can_bus.send(2, PWM_2, Fan_2)
-            # can_bus.recv()
-            # Temp_t = can_bus.temperature
-            # Force_t = can_bus.force
-            # self.Force_2.display(can_bus.force)
-            # self.ADC_2.display(PWM_2)
-            # self.Temp_2.display(can_bus.temperature)
-            #
-            # print('{0} {1} {2} {3} {4} {5} {6} {7} {8}'.format((time.time()-start_time),cur_Ang/23,obj_Ang/23,PWM_1,PWM_2,Temp_b,Temp_t,Force_b,Force_t))
+            if count<3:                         # Start point
+                obj_Ang = org_Ang
+
+            elif count >= 3 and count < 8:      # 0 to 20deg
+                t = count - 3.0
+                a = org_Ang
+                b = org_Ang + 20 * C2A
+                term = 5
+                obj_Ang = (2*(a-b)*t*t*t/(term*term*term)-3*(a-b)*t*t/(term*term) + a)
+
+            elif count >= 8 and count < 13:     # -10deg cont
+                obj_Ang = (org_Ang + 20*C2A)
+
+            elif count >= 13 and count < 18:    # 20deg to 45deg
+                t = count - 13
+                a = org_Ang + 20 * C2A
+                b = org_Ang + 45 * C2A
+                term = 5
+                obj_Ang = (2*(a-b)*t*t*t/(term*term*term)-3*(a-b)*t*t/(term*term) + a)
+
+            elif count >= 18 and count < 23:    # 45deg cont
+                obj_Ang = (org_Ang + 45*C2A)
+
+            elif count >= 23 and count < 30:    # 45deg to 5
+                t = count - 23
+                a = org_Ang + 45 * C2A
+                b = org_Ang + 5 * C2A
+                term = 7
+                obj_Ang = (2*(a-b)*t*t*t/(term*term*term)-3*(a-b)*t*t/(term*term) + a)
+
+            elif count >= 30 and count < 40:  # 5deg cont
+                obj_Ang = (org_Ang + 5 * C2A)
+
+            else :
+                obj_Ang = org_Ang
+
+        #----------Error Calculation-----------
+            error = obj_Ang - cur_Ang
+            de = error - error_prev
+            dt = time.time() - time_prev
+            control = int(Kp*error + Kd*de/dt + Ki*error*dt)
+            control2 = Kpp * error + Kii * error * dt
+            RealAngle = int((cur_Ang - org_Ang)/23)
+
+            if abs(error) <= Tolerance:
+                PWM_1 = int(0 + RealAngle*3)
+                PWM_2 = 0
+                Fan_1 = 300
+                Fan_2 = 0
+
+            elif error > Tolerance:
+                PWM_1 = int(abs(control) + RealAngle*3)
+                PWM_2 = 0
+                Fan_1 = 300
+                Fan_2 = 1023
+                if PWM_1 > 500:
+                    PWM_1 = 500
+
+            else:
+                PWM_1 = 0 + RealAngle*3
+                PWM_2 = int(abs(control2))
+                # PWM_2 = 0
+                Fan_1 = 300
+                Fan_2 = 0
+                if PWM_2 > 1023:
+                    PWM_2 = 1023
+
+            if count > 40:
+                PWM_1 = 0
+                Fan_1 = 1023
+                Fan_2 = 1023
+
+
+            can_bus.send(1, PWM_1, Fan_1)
+            can_bus.recv()
+            Temp_b = can_bus.temperature
+            Force_b = can_bus.force
+            self.ADC_1.display(PWM_1)
+            self.Force_1.display(can_bus.force)
+            self.Temp_1.display(can_bus.temperature)
+            self.Encoder_1.display(can_bus.displacement)
+
+            can_bus.send(2, PWM_2, Fan_2)
+            can_bus.recv()
+            Temp_t = can_bus.temperature
+            Force_t = can_bus.force
+            self.Force_2.display(can_bus.force)
+            self.ADC_2.display(PWM_2)
+            self.Temp_2.display(can_bus.temperature)
+
+            print('{0} {1} {2} {3} {4} {5} {6} {7} {8}'.format((time.time()-start_time), RealAngle, (obj_Ang-org_Ang)/23, PWM_1, PWM_2,Temp_b,Temp_t,Force_b,Force_t))
             #------------Previous DATA---------------
-            # error_prev = error
-            # time_prev = time.time()
-            print(Kp, Ki, Kd)
+            error_prev = error
+            time_prev = time.time()
             count = count + 0.1
             time.sleep(dt_sleep)
 
