@@ -187,7 +187,7 @@ class MyWindow(QMainWindow, form_class):
 
 
     def Start_clicked(self):
-        print("Time(s) Cur_Ang Obj_Ang PWM_b PWM_t Temp_b Temp_t Force_b Force_t")
+        print("Time(s) Cur_Ang PWM_b PWM_t Temp_b Temp_t Force_b Count")
         worker = Worker(self.Loop)
         self.threadpool.start(worker)
         #print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
@@ -236,32 +236,35 @@ class MyWindow(QMainWindow, form_class):
 
         #--------Time Initializtion---------------------
         dt = 0
-        dt_sleep = 0.1
+        dt_sleep = 0.25
         Tolerance = 0.1
         count = 0.0
         start_time = time.time()
         time_prev = 0
 
+        PWM_1 = 70
         Fan_1 = 300
         PWM_2 = 0
         Fan_2 = 0
+        PWMup = 10
 
         while Stop_push != True:
             cur_Ang = can_bus.displacement
 
             if count%20 == 0:                         # Start point
-                PWM_1 = PWM_1 + 10
-
-            else :
+                PWM_1 = PWM_1 + PWMup
 
             RealAngle = int((cur_Ang - org_Ang) / 23)
+
+            if RealAngle == 90:
+                PWMup = -10
 
             can_bus.send(1, PWM_1, Fan_1)
             can_bus.recv()
             Temp_b = can_bus.temperature
             Force_b = can_bus.force
             self.ADC_1.display(PWM_1)
-            # self.Force_1.display(can_bus.force)
+            self.Force_1.display(can_bus.force)
             self.Temp_1.display(can_bus.temperature)
             self.Encoder_1.display(RealAngle)
 
@@ -273,11 +276,11 @@ class MyWindow(QMainWindow, form_class):
             # self.ADC_2.display(PWM_2)
             # self.Temp_2.display(can_bus.temperature)
 
-            print('{0} {1} {2} {3} {4} {5} {6} {7} {8}'.format((time.time()-start_time), RealAngle, (obj_Ang-org_Ang)/23, PWM_1, PWM_2,Temp_b,Temp_t,Force_b,Force_t))
+            print('{0} {1} {2} {3} {4} {5} {6} {7}'.format((time.time()-start_time), RealAngle, PWM_1, PWM_2,Temp_b,Temp_t,Force_t,count))
             #------------Previous DATA---------------
             error_prev = error
             time_prev = time.time()
-            count = count + 0.1
+            count = count + 0.25
             time.sleep(dt_sleep)
 
     def Stop_clicked(self):

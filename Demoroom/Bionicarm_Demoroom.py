@@ -102,9 +102,9 @@ class MyWindow(QMainWindow, form_class):
     Fan_1 = 0
     Fan_2 = 0
     Time_inval = 10
-    Ki = 100
-    Kd = 6
-    Kp = 5
+    Ki = 10
+    Kd = 30
+    Kp = 1.5
     def __init__(self, *args, **kwargs):
         global Ki, Kd, Kp
         Ki = self.Ki
@@ -187,7 +187,7 @@ class MyWindow(QMainWindow, form_class):
 
 
     def Start_clicked(self):
-        print("Time(s) Cur_Ang Obj_Ang PWM_b PWM_t Temp_b Temp_t Force_b Force_t")
+        print("Time(s) Cur_Ang Obj_Ang PWM_b PWM_t Compen Control Force_b Force_t")
         worker = Worker(self.Loop)
         self.threadpool.start(worker)
         #print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
@@ -212,9 +212,9 @@ class MyWindow(QMainWindow, form_class):
 
         #----------------Control setting-------------------
         #-----PID value------------
-        Kp = self.Kp
-        Ki = self.Ki
-        Kd = self.Kd
+        Kp = 0.1
+        Ki = 5
+        Kd = 5
         Time_inval = self.Time_inval
         Kpp = 5
         Kii = 10
@@ -237,7 +237,7 @@ class MyWindow(QMainWindow, form_class):
         #--------Time Initializtion---------------------
         dt = 0
         dt_sleep = 0.1
-        Tolerance = 0.1
+        Tolerance = 10
         count = 0.0
         start_time = time.time()
         time_prev = 0
@@ -258,34 +258,34 @@ class MyWindow(QMainWindow, form_class):
             if count<3:                         # Start point
                 obj_Ang = org_Ang
 
-            elif count >= 3 and count < 8:      # 0 to 20deg
+            elif count >= 3 and count < 13:      # 0 to 20deg
                 t = count - 3.0
                 a = org_Ang
                 b = org_Ang + 20 * C2A
-                term = 5
+                term = 10
                 obj_Ang = (2*(a-b)*t*t*t/(term*term*term)-3*(a-b)*t*t/(term*term) + a)
 
-            elif count >= 8 and count < 13:     # -10deg cont
+            elif count >= 13 and count < 23:     # -10deg cont
                 obj_Ang = (org_Ang + 20*C2A)
 
-            elif count >= 13 and count < 18:    # 20deg to 45deg
-                t = count - 13
-                a = org_Ang + 20 * C2A
-                b = org_Ang + 45 * C2A
-                term = 5
-                obj_Ang = (2*(a-b)*t*t*t/(term*term*term)-3*(a-b)*t*t/(term*term) + a)
-
-            elif count >= 18 and count < 23:    # 45deg cont
-                obj_Ang = (org_Ang + 45*C2A)
-
-            elif count >= 23 and count < 30:    # 45deg to 5
+            elif count >= 23 and count < 33:    # 20deg to 45deg
                 t = count - 23
-                a = org_Ang + 45 * C2A
-                b = org_Ang + 5 * C2A
-                term = 7
+                a = org_Ang + 20 * C2A
+                b = org_Ang + 30 * C2A
+                term = 10
                 obj_Ang = (2*(a-b)*t*t*t/(term*term*term)-3*(a-b)*t*t/(term*term) + a)
 
-            elif count >= 30 and count < 40:  # 5deg cont
+            elif count >= 33 and count < 43:    # 45deg cont
+                obj_Ang = (org_Ang + 30*C2A)
+
+            elif count >= 43 and count < 53:    # 45deg to 5
+                t = count - 43
+                a = org_Ang + 30 * C2A
+                b = org_Ang + 5 * C2A
+                term = 10
+                obj_Ang = (2*(a-b)*t*t*t/(term*term*term)-3*(a-b)*t*t/(term*term) + a)
+
+            elif count >= 53 and count < 60:  # 5deg cont
                 obj_Ang = (org_Ang + 5 * C2A)
 
             else :
@@ -298,23 +298,24 @@ class MyWindow(QMainWindow, form_class):
             control = int(Kp*error + Kd*de/dt + Ki*error*dt)
             control2 = Kpp * error + Kii * error * dt
             RealAngle = int((cur_Ang - org_Ang)/23)
+            Realobject = int((obj_Ang - org_Ang)/23)
+            SMAcompensation = -0.0097*Realobject*Realobject + 3.706*Realobject + 119.2
 
             if abs(error) <= Tolerance:
-                PWM_1 = int(0 + RealAngle*3)
+                PWM_1 = int(0 + SMAcompensation)
                 PWM_2 = 0
                 Fan_1 = 300
-                Fan_2 = 0
+                Fan_2 = 300
 
             elif error > Tolerance:
-                PWM_1 = int(abs(control) + RealAngle*3)
+                PWM_1 = int(abs(control) + SMAcompensation)
                 PWM_2 = 0
                 Fan_1 = 300
-                Fan_2 = 1023
-                if PWM_1 > 500:
-                    PWM_1 = 500
+                Fan_2 = 300
+
 
             else:
-                PWM_1 = 0 + RealAngle*3
+                PWM_1 = int(SMAcompensation)
                 PWM_2 = int(abs(control2))
                 # PWM_2 = 0
                 Fan_1 = 300
@@ -322,13 +323,18 @@ class MyWindow(QMainWindow, form_class):
                 if PWM_2 > 1023:
                     PWM_2 = 1023
 
-            if count > 40:
+            if count > 60:
                 PWM_1 = 0
                 Fan_1 = 1023
                 Fan_2 = 1023
 
 
-            can_bus.send(1, PWM_1, Fan_1)
+            if PWM_1 > 500:
+                PWM_1 = 500
+
+            PWM_1 = 0
+            PWM_2 = 0
+            can_bus.send(1, PWM_1, 0)
             can_bus.recv()
             Temp_b = can_bus.temperature
             Force_b = can_bus.force
@@ -337,7 +343,7 @@ class MyWindow(QMainWindow, form_class):
             self.Temp_1.display(can_bus.temperature)
             # self.Encoder_1.display(can_bus.displacement)
 
-            can_bus.send(2, PWM_2, Fan_2)
+            can_bus.send(2, PWM_2, 0)
             can_bus.recv()
             Temp_t = can_bus.temperature
             Force_t = can_bus.force
@@ -345,7 +351,7 @@ class MyWindow(QMainWindow, form_class):
             self.ADC_2.display(PWM_2)
             self.Temp_2.display(can_bus.temperature)
 
-            print('{0} {1} {2} {3} {4} {5} {6} {7} {8}'.format((time.time()-start_time), RealAngle, (obj_Ang-org_Ang)/23, PWM_1, PWM_2,Temp_b,Temp_t,Force_b,Force_t))
+            print('{0} {1} {2} {3} {4} {5} {6} {7} {8}'.format((time.time()-start_time), RealAngle, Realobject, PWM_1, PWM_2, SMAcompensation, control, Force_b, error))
             #------------Previous DATA---------------
             error_prev = error
             time_prev = time.time()
